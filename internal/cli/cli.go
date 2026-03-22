@@ -2,9 +2,11 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +28,7 @@ func SetVersion(v string) {
 }
 
 // Run dispatches the CLI command.
-func Run(args []string) int {
+func Run(ctx context.Context, args []string) int {
 	if len(args) < 2 {
 		printUsage()
 		return 0
@@ -34,11 +36,11 @@ func Run(args []string) int {
 
 	switch args[1] {
 	case "init":
-		return runInit()
+		return runInit(ctx)
 	case "update":
-		return runUpdate()
+		return runUpdate(ctx)
 	case "list":
-		return runList()
+		return runList(ctx)
 	case "version":
 		fmt.Println(version)
 		return 0
@@ -46,7 +48,7 @@ func Run(args []string) int {
 		printUsage()
 		return 0
 	default:
-		fmt.Fprintf(os.Stderr, "reins: unknown command %q\n\n", args[1])
+		slog.ErrorContext(ctx, "unknown command", "command", args[1])
 		printUsage()
 		return 1
 	}
@@ -68,48 +70,47 @@ Run 'reins init' from your project root to get started.
 // runInit creates .reins/ with managed files and copies templates to the
 // project root. Templates are never overwritten; managed files are only
 // written if .reins/ doesn't exist yet.
-func runInit() int {
+func runInit(ctx context.Context) int {
 	if _, err := os.Stat(managedDir); err == nil {
-		fmt.Fprintf(os.Stderr, "reins: %s/ already exists. Use 'reins update' to refresh managed files.\n", managedDir)
+		slog.ErrorContext(ctx, "already initialized, use 'reins update' to refresh", "path", managedDir+"/")
 		return 1
 	}
 
 	// Warn if not running from a project root (no .git directory).
 	if _, err := os.Stat(".git"); errors.Is(err, fs.ErrNotExist) {
-		fmt.Fprintln(os.Stderr, "reins: warning: no .git directory found. Are you in the project root?")
+		slog.WarnContext(ctx, "no .git directory found, are you in the project root?")
 	}
 
-	fmt.Println("Initializing reins...")
-	fmt.Println()
+	slog.InfoContext(ctx, "initializing")
 
 	// 1. Copy managed files → .reins/
-	if err := copyEmbeddedDir("managed", managedDir, true); err != nil {
-		fmt.Fprintf(os.Stderr, "reins: failed to write managed files: %v\n", err)
+	if err := copyEmbeddedDir(ctx, "managed", managedDir, true); err != nil {
+		slog.ErrorContext(ctx, "failed to write managed files", "err", err)
 		return 1
 	}
 
 	// 2. Write version marker.
 	if err := os.WriteFile(versionFile, []byte(version+"\n"), 0o644); err != nil {
-		fmt.Fprintf(os.Stderr, "reins: failed to write version file: %v\n", err)
+		slog.ErrorContext(ctx, "failed to write version file", "err", err)
 		return 1
 	}
 
 	// 3. Copy scaffold → project root (skip existing).
-	if err := copyEmbeddedDir("scaffold", ".", false); err != nil {
-		fmt.Fprintf(os.Stderr, "reins: failed to write scaffold files: %v\n", err)
+	if err := copyEmbeddedDir(ctx, "scaffold", ".", false); err != nil {
+		slog.ErrorContext(ctx, "failed to write scaffold files", "err", err)
 		return 1
 	}
 
 	// 4. Copy language templates → .reins/templates/ for manual use.
-	if err := copyEmbeddedDir("templates", filepath.Join(managedDir, "templates"), true); err != nil {
-		fmt.Fprintf(os.Stderr, "reins: failed to write language templates: %v\n", err)
+	if err := copyEmbeddedDir(ctx, "templates", filepath.Join(managedDir, "templates"), true); err != nil {
+		slog.ErrorContext(ctx, "failed to write language templates", "err", err)
 		return 1
 	}
 
 	// 5. Create local rule directories.
 	for _, dir := range []string{"rules/principles", "rules/concerns", "rules/specifics"} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
-			fmt.Fprintf(os.Stderr, "reins: failed to create %s: %v\n", dir, err)
+			slog.ErrorContext(ctx, "failed to create directory", "path", dir, "err", err)
 			return 1
 		}
 	}
@@ -132,48 +133,47 @@ func runInit() int {
 
 // runUpdate refreshes managed files in .reins/ without touching project-owned
 // files (CLAUDE.md, Taskfile.yml, rules/INDEX.yaml).
-func runUpdate() int {
+func runUpdate(ctx context.Context) int {
 	if _, err := os.Stat(managedDir); errors.Is(err, fs.ErrNotExist) {
-		fmt.Fprintln(os.Stderr, "reins: not initialized. Run 'reins init' first.")
+		slog.ErrorContext(ctx, "not initialized, run 'reins init' first")
 		return 1
 	}
 
 	// Check if already at the current version.
 	if installed, err := os.ReadFile(versionFile); err == nil {
 		if strings.TrimSpace(string(installed)) == version {
-			fmt.Printf("Managed files already at version %s.\n", version)
+			slog.InfoContext(ctx, "managed files already current", "version", version)
 			return 0
 		}
 	}
 
-	fmt.Println("Updating managed files...")
-	fmt.Println()
+	slog.InfoContext(ctx, "updating managed files")
 
-	if err := copyEmbeddedDir("managed", managedDir, true); err != nil {
-		fmt.Fprintf(os.Stderr, "reins: failed to update managed files: %v\n", err)
+	if err := copyEmbeddedDir(ctx, "managed", managedDir, true); err != nil {
+		slog.ErrorContext(ctx, "failed to update managed files", "err", err)
 		return 1
 	}
 
 	// Update version marker.
 	if err := os.WriteFile(versionFile, []byte(version+"\n"), 0o644); err != nil {
-		fmt.Fprintf(os.Stderr, "reins: failed to write version file: %v\n", err)
+		slog.ErrorContext(ctx, "failed to write version file", "err", err)
 		return 1
 	}
 
 	// Also refresh template copies inside .reins/ so users can diff
 	// against the latest versions and manually copy language templates.
-	if err := copyEmbeddedDir("scaffold", filepath.Join(managedDir, "scaffold"), true); err != nil {
-		fmt.Fprintf(os.Stderr, "reins: failed to update scaffold templates: %v\n", err)
+	if err := copyEmbeddedDir(ctx, "scaffold", filepath.Join(managedDir, "scaffold"), true); err != nil {
+		slog.ErrorContext(ctx, "failed to update scaffold templates", "err", err)
 		return 1
 	}
 
-	if err := copyEmbeddedDir("templates", filepath.Join(managedDir, "templates"), true); err != nil {
-		fmt.Fprintf(os.Stderr, "reins: failed to update language templates: %v\n", err)
+	if err := copyEmbeddedDir(ctx, "templates", filepath.Join(managedDir, "templates"), true); err != nil {
+		slog.ErrorContext(ctx, "failed to update language templates", "err", err)
 		return 1
 	}
 
-	fmt.Println()
-	fmt.Printf("Updated to version %s.\n", version)
+	slog.InfoContext(ctx, "update complete", "version", version)
+
 	fmt.Println()
 	fmt.Println("Project-owned files were not modified (CLAUDE.md, Taskfile.yml, rules/INDEX.yaml).")
 	fmt.Println("To check for scaffold changes:")
@@ -185,7 +185,7 @@ func runUpdate() int {
 }
 
 // runList prints available language/framework templates.
-func runList() int {
+func runList(ctx context.Context) int {
 	fmt.Println("Available language/framework templates:")
 	fmt.Println()
 
@@ -204,7 +204,7 @@ func runList() int {
 		return nil
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "reins: %v\n", err)
+		slog.ErrorContext(ctx, "failed to list templates", "err", err)
 		return 1
 	}
 
@@ -220,7 +220,7 @@ func runList() int {
 
 // copyEmbeddedDir walks srcRoot inside the embedded FS and writes files to
 // dstRoot on disk. When overwrite is false, existing files are skipped.
-func copyEmbeddedDir(srcRoot, dstRoot string, overwrite bool) error {
+func copyEmbeddedDir(ctx context.Context, srcRoot, dstRoot string, overwrite bool) error {
 	return fs.WalkDir(content.FS, srcRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -242,7 +242,7 @@ func copyEmbeddedDir(srcRoot, dstRoot string, overwrite bool) error {
 
 		if !overwrite {
 			if _, statErr := os.Stat(dst); statErr == nil {
-				fmt.Printf("  SKIP    %s (already exists)\n", dst)
+				slog.InfoContext(ctx, "skip", "path", dst, "reason", "already exists")
 				return nil
 			}
 		}
@@ -256,7 +256,7 @@ func copyEmbeddedDir(srcRoot, dstRoot string, overwrite bool) error {
 			return fmt.Errorf("creating parent directory for %s: %w", dst, err)
 		}
 
-		fmt.Printf("  CREATE  %s\n", dst)
+		slog.InfoContext(ctx, "create", "path", dst)
 
 		if err := os.WriteFile(dst, data, 0o644); err != nil {
 			return fmt.Errorf("writing %s: %w", dst, err)

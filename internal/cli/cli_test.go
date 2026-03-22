@@ -2,89 +2,63 @@ package cli
 
 import (
 	"bytes"
+	"context"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// captureStdout calls fn while redirecting os.Stdout to a buffer.
-// Returns the captured output and any error from pipe plumbing.
-func captureStdout(t *testing.T, fn func()) string {
+// newTestLogger configures slog to write to a buffer and returns it.
+// The previous default logger is restored via t.Cleanup.
+func newTestLogger(t *testing.T) *bytes.Buffer {
 	t.Helper()
-
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe: %v", err)
-	}
-
-	old := os.Stdout
-	os.Stdout = w
-
-	fn()
-
-	os.Stdout = old
-	if err := w.Close(); err != nil {
-		t.Fatalf("closing pipe writer: %v", err)
-	}
-
 	var buf bytes.Buffer
-	if _, err := buf.ReadFrom(r); err != nil {
-		t.Fatalf("reading captured output: %v", err)
-	}
-	return buf.String()
+	h := slog.NewTextHandler(&buf, &slog.HandlerOptions{
+		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.TimeKey {
+				return slog.Attr{}
+			}
+			return a
+		},
+	})
+	old := slog.Default()
+	slog.SetDefault(slog.New(h))
+	t.Cleanup(func() { slog.SetDefault(old) })
+	return &buf
 }
 
-// captureStderr calls fn while redirecting os.Stderr to a buffer.
-func captureStderr(t *testing.T, fn func()) string {
-	t.Helper()
-
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe: %v", err)
-	}
-
-	old := os.Stderr
-	os.Stderr = w
-
-	fn()
-
-	os.Stderr = old
-	if err := w.Close(); err != nil {
-		t.Fatalf("closing pipe writer: %v", err)
-	}
-
-	var buf bytes.Buffer
-	if _, err := buf.ReadFrom(r); err != nil {
-		t.Fatalf("reading captured output: %v", err)
-	}
-	return buf.String()
-}
-
-// suppressOutput calls fn while discarding both stdout and stderr.
+// suppressOutput discards both stdout and slog output while fn runs.
 func suppressOutput(t *testing.T, fn func()) {
 	t.Helper()
 
+	// Discard slog output.
+	oldLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	// Discard stdout.
 	devNull, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
 	if err != nil {
 		t.Fatalf("opening devnull: %v", err)
 	}
 	defer devNull.Close()
 
-	oldOut, oldErr := os.Stdout, os.Stderr
+	oldOut := os.Stdout
 	os.Stdout = devNull
-	os.Stderr = devNull
 
 	fn()
 
 	os.Stdout = oldOut
-	os.Stderr = oldErr
+	slog.SetDefault(oldLogger)
 }
 
 func TestRunInit_CreatesExpectedFiles(t *testing.T) {
 	t.Chdir(t.TempDir())
+	ctx := context.Background()
 
-	code := runInit()
+	code := runInit(ctx)
 	if code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
@@ -130,12 +104,13 @@ func TestRunInit_CreatesExpectedFiles(t *testing.T) {
 
 func TestRunInit_RejectsDoubleInit(t *testing.T) {
 	t.Chdir(t.TempDir())
+	ctx := context.Background()
 
-	if code := runInit(); code != 0 {
+	if code := runInit(ctx); code != 0 {
 		t.Fatalf("first runInit() = %d, want 0", code)
 	}
 
-	code := runInit()
+	code := runInit(ctx)
 	if code != 1 {
 		t.Errorf("second runInit() = %d, want 1", code)
 	}
@@ -143,11 +118,12 @@ func TestRunInit_RejectsDoubleInit(t *testing.T) {
 
 func TestRunInit_WritesVersion(t *testing.T) {
 	t.Chdir(t.TempDir())
+	ctx := context.Background()
 
 	SetVersion("1.2.3")
 	t.Cleanup(func() { SetVersion("dev") })
 
-	if code := runInit(); code != 0 {
+	if code := runInit(ctx); code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
 
@@ -162,10 +138,11 @@ func TestRunInit_WritesVersion(t *testing.T) {
 
 func TestRunUpdate_RefreshesManagedFiles(t *testing.T) {
 	t.Chdir(t.TempDir())
+	ctx := context.Background()
 
 	SetVersion("1.0.0")
 
-	if code := runInit(); code != 0 {
+	if code := runInit(ctx); code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
 
@@ -179,7 +156,7 @@ func TestRunUpdate_RefreshesManagedFiles(t *testing.T) {
 	SetVersion("1.1.0")
 	t.Cleanup(func() { SetVersion("dev") })
 
-	code := runUpdate()
+	code := runUpdate(ctx)
 	if code != 0 {
 		t.Fatalf("runUpdate() = %d, want 0", code)
 	}
@@ -195,10 +172,11 @@ func TestRunUpdate_RefreshesManagedFiles(t *testing.T) {
 
 func TestRunUpdate_DoesNotOverwriteProjectFiles(t *testing.T) {
 	t.Chdir(t.TempDir())
+	ctx := context.Background()
 
 	SetVersion("1.0.0")
 
-	if code := runInit(); code != 0 {
+	if code := runInit(ctx); code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
 
@@ -212,7 +190,7 @@ func TestRunUpdate_DoesNotOverwriteProjectFiles(t *testing.T) {
 	SetVersion("1.1.0")
 	t.Cleanup(func() { SetVersion("dev") })
 
-	code := runUpdate()
+	code := runUpdate(ctx)
 	if code != 0 {
 		t.Fatalf("runUpdate() = %d, want 0", code)
 	}
@@ -229,43 +207,54 @@ func TestRunUpdate_DoesNotOverwriteProjectFiles(t *testing.T) {
 
 func TestRunUpdate_FailsWithoutInit(t *testing.T) {
 	t.Chdir(t.TempDir())
+	ctx := context.Background()
 
-	code := runUpdate()
+	code := runUpdate(ctx)
 	if code != 1 {
 		t.Errorf("runUpdate() without init = %d, want 1", code)
 	}
 }
 
 func TestRunList_Succeeds(t *testing.T) {
-	code := runList()
+	ctx := context.Background()
+
+	code := runList(ctx)
 	if code != 0 {
 		t.Errorf("runList() = %d, want 0", code)
 	}
 }
 
 func TestRun_Version(t *testing.T) {
-	code := Run([]string{"reins", "version"})
+	ctx := context.Background()
+
+	code := Run(ctx, []string{"reins", "version"})
 	if code != 0 {
 		t.Errorf("Run version = %d, want 0", code)
 	}
 }
 
 func TestRun_Help(t *testing.T) {
-	code := Run([]string{"reins", "help"})
+	ctx := context.Background()
+
+	code := Run(ctx, []string{"reins", "help"})
 	if code != 0 {
 		t.Errorf("Run help = %d, want 0", code)
 	}
 }
 
 func TestRun_UnknownCommand(t *testing.T) {
-	code := Run([]string{"reins", "bogus"})
+	ctx := context.Background()
+
+	code := Run(ctx, []string{"reins", "bogus"})
 	if code != 1 {
 		t.Errorf("Run bogus = %d, want 1", code)
 	}
 }
 
 func TestRun_NoArgs(t *testing.T) {
-	code := Run([]string{"reins"})
+	ctx := context.Background()
+
+	code := Run(ctx, []string{"reins"})
 	if code != 0 {
 		t.Errorf("Run no args = %d, want 0", code)
 	}
@@ -273,27 +262,26 @@ func TestRun_NoArgs(t *testing.T) {
 
 func TestRunUpdate_SkipsWhenAlreadyCurrent(t *testing.T) {
 	t.Chdir(t.TempDir())
+	ctx := context.Background()
 
 	SetVersion("1.0.0")
 	t.Cleanup(func() { SetVersion("dev") })
 
 	suppressOutput(t, func() {
-		if code := runInit(); code != 0 {
+		if code := runInit(ctx); code != 0 {
 			t.Fatalf("runInit() = %d, want 0", code)
 		}
 	})
 
 	// Update with the same version should succeed and report already current.
-	var code int
-	out := captureStdout(t, func() {
-		code = runUpdate()
-	})
+	logBuf := newTestLogger(t)
+	code := runUpdate(ctx)
 	if code != 0 {
 		t.Errorf("runUpdate() same version = %d, want 0", code)
 	}
 
-	if !strings.Contains(out, "already at version") {
-		t.Errorf("expected 'already at version' in output, got:\n%s", out)
+	if !strings.Contains(logBuf.String(), "already current") {
+		t.Errorf("expected 'already current' in log output, got:\n%s", logBuf.String())
 	}
 
 	// VERSION file should still contain the same version.
@@ -308,10 +296,11 @@ func TestRunUpdate_SkipsWhenAlreadyCurrent(t *testing.T) {
 
 func TestRunUpdate_ProceedsWhenVersionDiffers(t *testing.T) {
 	t.Chdir(t.TempDir())
+	ctx := context.Background()
 
 	SetVersion("1.0.0")
 
-	if code := runInit(); code != 0 {
+	if code := runInit(ctx); code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
 
@@ -319,7 +308,7 @@ func TestRunUpdate_ProceedsWhenVersionDiffers(t *testing.T) {
 	SetVersion("2.0.0")
 	t.Cleanup(func() { SetVersion("dev") })
 
-	code := runUpdate()
+	code := runUpdate(ctx)
 	if code != 0 {
 		t.Errorf("runUpdate() newer version = %d, want 0", code)
 	}
@@ -336,40 +325,35 @@ func TestRunUpdate_ProceedsWhenVersionDiffers(t *testing.T) {
 
 func TestRunInit_WarnsWithoutGitDir(t *testing.T) {
 	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
 	// No .git directory — init should still succeed (return 0) but warn.
-	var code int
-	stderr := captureStderr(t, func() {
-		captureStdout(t, func() {
-			code = runInit()
-		})
-	})
+	logBuf := newTestLogger(t)
+	code := runInit(ctx)
 	if code != 0 {
 		t.Errorf("runInit() without .git = %d, want 0 (with warning)", code)
 	}
-	if !strings.Contains(stderr, "warning") {
-		t.Errorf("expected warning on stderr without .git, got:\n%q", stderr)
+	if !strings.Contains(logBuf.String(), "WARN") {
+		t.Errorf("expected WARN in log output without .git, got:\n%s", logBuf.String())
 	}
 }
 
 func TestRunInit_NoWarningWithGitDir(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
+	ctx := context.Background()
 
 	// Create .git directory to simulate a project root.
 	if err := os.Mkdir(".git", 0o755); err != nil {
 		t.Fatalf("failed to create .git: %v", err)
 	}
 
-	var code int
-	stderr := captureStderr(t, func() {
-		captureStdout(t, func() {
-			code = runInit()
-		})
-	})
+	logBuf := newTestLogger(t)
+	code := runInit(ctx)
 	if code != 0 {
 		t.Errorf("runInit() with .git = %d, want 0", code)
 	}
-	if strings.Contains(stderr, "warning") {
-		t.Errorf("unexpected warning on stderr with .git present:\n%q", stderr)
+	if strings.Contains(logBuf.String(), "WARN") {
+		t.Errorf("unexpected WARN in log output with .git present:\n%s", logBuf.String())
 	}
 }
