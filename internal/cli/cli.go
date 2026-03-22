@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -127,7 +128,7 @@ func runInit() int {
 // runUpdate refreshes managed files in .reins/ without touching project-owned
 // files (CLAUDE.md, Taskfile.yml, rules/INDEX.yaml).
 func runUpdate() int {
-	if _, err := os.Stat(managedDir); os.IsNotExist(err) {
+	if _, err := os.Stat(managedDir); errors.Is(err, fs.ErrNotExist) {
 		fmt.Fprintln(os.Stderr, "reins: not initialized. Run 'reins init' first.")
 		return 1
 	}
@@ -214,13 +215,16 @@ func copyEmbeddedDir(srcRoot, dstRoot string, overwrite bool) error {
 
 		rel, err := filepath.Rel(srcRoot, path)
 		if err != nil {
-			return err
+			return fmt.Errorf("computing relative path for %s: %w", path, err)
 		}
 
 		dst := filepath.Join(dstRoot, rel)
 
 		if d.IsDir() {
-			return os.MkdirAll(dst, 0o755)
+			if err := os.MkdirAll(dst, 0o755); err != nil {
+				return fmt.Errorf("creating directory %s: %w", dst, err)
+			}
+			return nil
 		}
 
 		if !overwrite {
@@ -236,11 +240,14 @@ func copyEmbeddedDir(srcRoot, dstRoot string, overwrite bool) error {
 		}
 
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			return err
+			return fmt.Errorf("creating parent directory for %s: %w", dst, err)
 		}
 
 		fmt.Printf("  CREATE  %s\n", dst)
 
-		return os.WriteFile(dst, data, 0o644)
+		if err := os.WriteFile(dst, data, 0o644); err != nil {
+			return fmt.Errorf("writing %s: %w", dst, err)
+		}
+		return nil
 	})
 }
