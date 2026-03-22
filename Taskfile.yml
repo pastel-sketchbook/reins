@@ -170,3 +170,38 @@ tasks:
       - task: dist:build
       - task: dist:package
       - task: dist:checksums
+
+  dist:release:
+    desc: "Build dist, create GitHub Release, upload all artifacts"
+    preconditions:
+      - sh: '[ -n "$(cat VERSION 2>/dev/null)" ]'
+        msg: "VERSION file is missing or empty"
+      - sh: 'git diff --quiet && git diff --cached --quiet'
+        msg: "Working tree is dirty — commit or stash changes first"
+      - sh: 'command -v gh >/dev/null 2>&1'
+        msg: "gh CLI is required (https://cli.github.com)"
+    cmds:
+      - task: dist:all
+      - |
+        tag="v{{.VERSION}}"
+        if ! git rev-parse "${tag}" >/dev/null 2>&1; then
+          git tag "${tag}"
+          git push origin "${tag}"
+          echo "Created and pushed tag ${tag}"
+        else
+          echo "Tag ${tag} already exists, skipping tag creation"
+        fi
+      - |
+        tag="v{{.VERSION}}"
+        if gh release view "${tag}" >/dev/null 2>&1; then
+          echo "Release ${tag} already exists — uploading assets only"
+          gh release upload "${tag}" dist/reins-v{{.VERSION}}-*.tar.gz dist/reins-v{{.VERSION}}-*.zip dist/checksums-v{{.VERSION}}.txt --clobber
+        else
+          gh release create "${tag}" \
+            dist/reins-v{{.VERSION}}-*.tar.gz \
+            dist/reins-v{{.VERSION}}-*.zip \
+            dist/checksums-v{{.VERSION}}.txt \
+            --title "reins ${tag}" \
+            --notes "Release ${tag}. See install instructions in README.md."
+        fi
+        echo "Release ${tag} published: https://github.com/pastel-sketchbook/reins/releases/tag/${tag}"

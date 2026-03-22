@@ -2,6 +2,10 @@
 /reins
 dist/
 
+# Local reins init output (this is the source repo, not a downstream project)
+/.reins/
+/AUTOPILOT.md
+
 # Environment / secrets
 .env
 .env.*

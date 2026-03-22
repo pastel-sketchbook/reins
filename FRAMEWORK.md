@@ -531,6 +531,7 @@ diff AUTOPILOT.md .reins/scaffold/AUTOPILOT.md
 |---------|-------------|
 | `reins init` | Bootstrap reins in the current project |
 | `reins update` | Refresh managed files to latest version |
+| `reins skill` | Install the reins AI tool skill (global or local) |
 | `reins list` | List available language/framework templates |
 | `reins version` | Print installed reins version |
 
