@@ -355,11 +355,221 @@ func TestRunInit_NoWarningWithGitDir(t *testing.T) {
 	}
 
 	logBuf := newTestLogger(t)
+
+	// Skip skill prompt during init.
+	setStdin(t, "n\n")
+
 	code := runInit(ctx)
 	if code != 0 {
 		t.Errorf("runInit() with .git = %d, want 0", code)
 	}
 	if strings.Contains(logBuf.String(), "WARN") {
 		t.Errorf("unexpected WARN in log output with .git present:\n%s", logBuf.String())
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Skill installation tests
+// ---------------------------------------------------------------------------
+
+// setStdin replaces stdin with the given content and restores it on cleanup.
+func setStdin(t *testing.T, content string) {
+	t.Helper()
+	old := stdin
+	stdin = strings.NewReader(content)
+	t.Cleanup(func() { stdin = old })
+}
+
+func TestInstallSkill_Global(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	// Use a temp dir as the fake home so we don't touch the real one.
+	fakeHome := t.TempDir()
+	t.Setenv("HOME", fakeHome)
+
+	ctx := context.Background()
+	code := installSkill(ctx, true)
+	if code != 0 {
+		t.Fatalf("installSkill(global) = %d, want 0", code)
+	}
+
+	skillPath := filepath.Join(fakeHome, ".agents", "skills", "reins", "SKILL.md")
+	data, err := os.ReadFile(skillPath)
+	if err != nil {
+		t.Fatalf("skill file not found at %s: %v", skillPath, err)
+	}
+	if !strings.Contains(string(data), "name: reins") {
+		t.Error("skill file missing expected frontmatter")
+	}
+}
+
+func TestInstallSkill_Local(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := installSkill(ctx, false)
+	if code != 0 {
+		t.Fatalf("installSkill(local) = %d, want 0", code)
+	}
+
+	skillPath := filepath.Join(".agents", "skills", "reins", "SKILL.md")
+	data, err := os.ReadFile(skillPath)
+	if err != nil {
+		t.Fatalf("skill file not found at %s: %v", skillPath, err)
+	}
+	if !strings.Contains(string(data), "name: reins") {
+		t.Error("skill file missing expected frontmatter")
+	}
+}
+
+func TestPromptSkillLocation_Global(t *testing.T) {
+	setStdin(t, "g\n")
+	got := promptSkillLocation()
+	if got != "g" {
+		t.Errorf("promptSkillLocation() = %q, want %q", got, "g")
+	}
+}
+
+func TestPromptSkillLocation_Local(t *testing.T) {
+	setStdin(t, "l\n")
+	got := promptSkillLocation()
+	if got != "l" {
+		t.Errorf("promptSkillLocation() = %q, want %q", got, "l")
+	}
+}
+
+func TestPromptSkillLocation_Skip(t *testing.T) {
+	setStdin(t, "n\n")
+	got := promptSkillLocation()
+	if got != "n" {
+		t.Errorf("promptSkillLocation() = %q, want %q", got, "n")
+	}
+}
+
+func TestRunInit_InstallsSkillWhenChosen(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	// Choose local skill installation.
+	setStdin(t, "l\n")
+
+	code := runInit(ctx)
+	if code != 0 {
+		t.Fatalf("runInit() = %d, want 0", code)
+	}
+
+	skillPath := filepath.Join(".agents", "skills", "reins", "SKILL.md")
+	if _, err := os.Stat(skillPath); err != nil {
+		t.Errorf("expected local skill at %s: %v", skillPath, err)
+	}
+}
+
+func TestRunInit_SkipsSkillWhenDeclined(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	setStdin(t, "n\n")
+
+	code := runInit(ctx)
+	if code != 0 {
+		t.Fatalf("runInit() = %d, want 0", code)
+	}
+
+	skillPath := filepath.Join(".agents", "skills", "reins", "SKILL.md")
+	if _, err := os.Stat(skillPath); err == nil {
+		t.Error("skill file should not exist when user chose 'n'")
+	}
+}
+
+func TestRunUpdate_RefreshesGlobalSkill(t *testing.T) {
+	t.Chdir(t.TempDir())
+	fakeHome := t.TempDir()
+	t.Setenv("HOME", fakeHome)
+	ctx := context.Background()
+
+	SetVersion("1.0.0")
+
+	// Init with skip-skill to avoid prompt, then manually place a global skill.
+	setStdin(t, "n\n")
+	if code := runInit(ctx); code != 0 {
+		t.Fatalf("runInit() = %d, want 0", code)
+	}
+
+	globalSkill := filepath.Join(fakeHome, ".agents", "skills", "reins", "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(globalSkill), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(globalSkill, []byte("old"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	SetVersion("1.1.0")
+	t.Cleanup(func() { SetVersion("dev") })
+
+	code := runUpdate(ctx)
+	if code != 0 {
+		t.Fatalf("runUpdate() = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile(globalSkill)
+	if err != nil {
+		t.Fatalf("global skill not found after update: %v", err)
+	}
+	if string(data) == "old" {
+		t.Error("global skill was not refreshed by update")
+	}
+}
+
+func TestRunUpdate_RefreshesLocalSkill(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	SetVersion("1.0.0")
+
+	setStdin(t, "n\n")
+	if code := runInit(ctx); code != 0 {
+		t.Fatalf("runInit() = %d, want 0", code)
+	}
+
+	localSkill := filepath.Join(".agents", "skills", "reins", "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(localSkill), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(localSkill, []byte("old"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	SetVersion("1.1.0")
+	t.Cleanup(func() { SetVersion("dev") })
+
+	code := runUpdate(ctx)
+	if code != 0 {
+		t.Fatalf("runUpdate() = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile(localSkill)
+	if err != nil {
+		t.Fatalf("local skill not found after update: %v", err)
+	}
+	if string(data) == "old" {
+		t.Error("local skill was not refreshed by update")
+	}
+}
+
+func TestRun_SkillCommand(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	// Choose local.
+	setStdin(t, "l\n")
+
+	code := Run(ctx, []string{"reins", "skill"})
+	if code != 0 {
+		t.Errorf("Run skill = %d, want 0", code)
+	}
+
+	skillPath := filepath.Join(".agents", "skills", "reins", "SKILL.md")
+	if _, err := os.Stat(skillPath); err != nil {
+		t.Errorf("expected skill at %s: %v", skillPath, err)
 	}
 }

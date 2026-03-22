@@ -2,9 +2,11 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -15,12 +17,18 @@ import (
 )
 
 const (
-	managedDir  = ".reins"
-	versionFile = ".reins/VERSION"
+	managedDir    = ".reins"
+	versionFile   = ".reins/VERSION"
+	skillRelPath  = ".agents/skills/reins/SKILL.md"
+	skillEmbedded = "skill/SKILL.md"
 )
 
 // version is set via ldflags at build time.
 var version = "dev"
+
+// stdin is the reader used by interactive prompts.
+// Tests replace this to inject input without blocking.
+var stdin io.Reader = os.Stdin
 
 // SetVersion sets the embedded version string (called from main).
 func SetVersion(v string) {
@@ -41,6 +49,8 @@ func Run(ctx context.Context, args []string) int {
 		return runUpdate(ctx)
 	case "list":
 		return runList(ctx)
+	case "skill":
+		return runSkill(ctx)
 	case "version":
 		fmt.Println(version)
 		return 0
@@ -61,6 +71,7 @@ Commands:
   init      Bootstrap reins in the current project
   update    Refresh managed files (.reins/) to latest version
   list      List available language/framework templates
+  skill     Install the reins skill for AI tool discovery
   version   Print reins version
 
 Run 'reins init' from your project root to get started.
@@ -112,6 +123,19 @@ func runInit(ctx context.Context) int {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			slog.ErrorContext(ctx, "failed to create directory", "path", dir, "err", err)
 			return 1
+		}
+	}
+
+	// 6. Prompt for skill installation.
+	choice := promptSkillLocation()
+	switch choice {
+	case "g":
+		if code := installSkill(ctx, true); code != 0 {
+			return code
+		}
+	case "l":
+		if code := installSkill(ctx, false); code != 0 {
+			return code
 		}
 	}
 
@@ -173,6 +197,9 @@ func runUpdate(ctx context.Context) int {
 		return 1
 	}
 
+	// Refresh skill if previously installed (global or local).
+	refreshSkill(ctx)
+
 	slog.InfoContext(ctx, "update complete", "version", version)
 
 	fmt.Println()
@@ -218,6 +245,108 @@ func runList(ctx context.Context) int {
 	fmt.Println()
 
 	return 0
+}
+
+// runSkill is the standalone `reins skill` command. It prompts for
+// the installation location and copies the embedded SKILL.md.
+func runSkill(ctx context.Context) int {
+	choice := promptSkillLocation()
+	switch choice {
+	case "g":
+		return installSkill(ctx, true)
+	case "l":
+		return installSkill(ctx, false)
+	default:
+		fmt.Println("Skipped.")
+		return 0
+	}
+}
+
+// promptSkillLocation asks the user where to install the reins skill
+// and returns "g" (global), "l" (local), or "n" (skip).
+func promptSkillLocation() string {
+	fmt.Println()
+	fmt.Println("Install reins skill for AI tool discovery?")
+	fmt.Println()
+	fmt.Println("  [g] Global  ~/.agents/skills/reins/  (shared across all projects)")
+	fmt.Println("  [l] Local   .agents/skills/reins/    (this project only)")
+	fmt.Println("  [n] Skip")
+	fmt.Println()
+	fmt.Print("Choice [g/l/n]: ")
+
+	scanner := bufio.NewScanner(stdin)
+	if scanner.Scan() {
+		return strings.ToLower(strings.TrimSpace(scanner.Text()))
+	}
+	return "n"
+}
+
+// installSkill copies the embedded SKILL.md to the chosen location.
+// When global is true, it installs to ~/.agents/skills/reins/SKILL.md.
+// When false, it installs to .agents/skills/reins/SKILL.md in the cwd.
+func installSkill(ctx context.Context, global bool) int {
+	data, err := fs.ReadFile(content.FS, skillEmbedded)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to read embedded skill", "err", err)
+		return 1
+	}
+
+	dst := localSkillPath()
+	if global {
+		dst = globalSkillPath()
+	}
+
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		slog.ErrorContext(ctx, "failed to create skill directory", "path", dst, "err", err)
+		return 1
+	}
+
+	if err := os.WriteFile(dst, data, 0o644); err != nil {
+		slog.ErrorContext(ctx, "failed to write skill file", "path", dst, "err", err)
+		return 1
+	}
+
+	if global {
+		slog.InfoContext(ctx, "installed global skill", "path", dst)
+	} else {
+		slog.InfoContext(ctx, "installed local skill", "path", dst)
+	}
+	return 0
+}
+
+// refreshSkill updates the SKILL.md in whichever location(s) it already
+// exists. Called during `reins update`.
+func refreshSkill(ctx context.Context) {
+	data, err := fs.ReadFile(content.FS, skillEmbedded)
+	if err != nil {
+		slog.WarnContext(ctx, "failed to read embedded skill for refresh", "err", err)
+		return
+	}
+
+	for _, dst := range []string{globalSkillPath(), localSkillPath()} {
+		if _, statErr := os.Stat(dst); statErr != nil {
+			continue
+		}
+		if writeErr := os.WriteFile(dst, data, 0o644); writeErr != nil {
+			slog.WarnContext(ctx, "failed to refresh skill", "path", dst, "err", writeErr)
+			continue
+		}
+		slog.InfoContext(ctx, "refreshed skill", "path", dst)
+	}
+}
+
+// globalSkillPath returns ~/.agents/skills/reins/SKILL.md.
+func globalSkillPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = os.Getenv("HOME")
+	}
+	return filepath.Join(home, skillRelPath)
+}
+
+// localSkillPath returns .agents/skills/reins/SKILL.md relative to cwd.
+func localSkillPath() string {
+	return skillRelPath
 }
 
 // copyEmbeddedDir walks srcRoot inside the embedded FS and writes files to

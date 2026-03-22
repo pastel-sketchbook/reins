@@ -173,6 +173,10 @@ main() {
 
   echo ""
   "${DEST}" version 2>/dev/null || true
+
+  # Offer skill installation for AI tool discovery.
+  echo ""
+  "${DEST}" skill || true
 }
 
 main
