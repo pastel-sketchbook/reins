@@ -4,6 +4,7 @@ vars:
   VERSION:
     sh: cat VERSION 2>/dev/null || echo "dev"
   LDFLAGS: "-s -w -X main.version={{.VERSION}}"
+  STATICCHECK_VERSION: "v0.7.0"
 
 tasks:
   build:
@@ -28,9 +29,9 @@ tasks:
       - gofmt -w .
 
   lint:
-    desc: "Run static analysis"
+    desc: "Run staticcheck ({{.STATICCHECK_VERSION}})"
     cmds:
-      - go vet ./...
+      - staticcheck ./...
 
   vet:
     desc: "Run go vet"

@@ -72,6 +72,10 @@ func TestRunInit_CreatesExpectedFiles(t *testing.T) {
 		".reins/templates/specifics/go.md",
 		".reins/templates/specifics/echo.md",
 		".reins/templates/specifics/badgerdb.md",
+		".reins/templates/specifics/python.md",
+		".reins/templates/specifics/typescript.md",
+		".reins/templates/specifics/rust.md",
+		".reins/templates/specifics/zig.md",
 		// Scaffold files
 		"CLAUDE.md",
 		"Taskfile.yml",
