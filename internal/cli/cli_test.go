@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"os"
@@ -10,6 +11,14 @@ import (
 	"strings"
 	"testing"
 )
+
+// TestMain disables /dev/tty fallback so tests never block on terminal input.
+func TestMain(m *testing.M) {
+	openTTY = func() (io.ReadCloser, error) {
+		return nil, errors.New("no tty in tests")
+	}
+	os.Exit(m.Run())
+}
 
 // newTestLogger configures slog to write to a buffer and returns it.
 // The previous default logger is restored via t.Cleanup.
@@ -443,6 +452,35 @@ func TestPromptSkillLocation_Skip(t *testing.T) {
 	got := promptSkillLocation()
 	if got != "n" {
 		t.Errorf("promptSkillLocation() = %q, want %q", got, "n")
+	}
+}
+
+func TestPromptSkillLocation_TTYFallback(t *testing.T) {
+	// Simulate stdin being a closed pipe (EOF), with /dev/tty providing input.
+	old := stdin
+	oldTTY := openTTY
+	stdin = strings.NewReader("") // empty — triggers fallback
+	openTTY = func() (io.ReadCloser, error) {
+		return io.NopCloser(strings.NewReader("g\n")), nil
+	}
+	t.Cleanup(func() { stdin = old; openTTY = oldTTY })
+
+	got := promptSkillLocation()
+	if got != "g" {
+		t.Errorf("promptSkillLocation() TTY fallback = %q, want %q", got, "g")
+	}
+}
+
+func TestPromptSkillLocation_NoTTYSkips(t *testing.T) {
+	// When stdin is EOF and /dev/tty is unavailable, default to "n".
+	old := stdin
+	stdin = strings.NewReader("")
+	t.Cleanup(func() { stdin = old })
+	// openTTY already returns error from TestMain.
+
+	got := promptSkillLocation()
+	if got != "n" {
+		t.Errorf("promptSkillLocation() no TTY = %q, want %q", got, "n")
 	}
 }
 

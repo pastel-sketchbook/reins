@@ -30,6 +30,13 @@ var version = "dev"
 // Tests replace this to inject input without blocking.
 var stdin io.Reader = os.Stdin
 
+// openTTY opens the controlling terminal for interactive fallback
+// when stdin is a pipe (e.g. curl | sh). Tests replace this to
+// prevent blocking on /dev/tty.
+var openTTY = func() (io.ReadCloser, error) {
+	return os.Open("/dev/tty")
+}
+
 // SetVersion sets the embedded version string (called from main).
 func SetVersion(v string) {
 	version = v
@@ -264,6 +271,10 @@ func runSkill(ctx context.Context) int {
 
 // promptSkillLocation asks the user where to install the reins skill
 // and returns "g" (global), "l" (local), or "n" (skip).
+//
+// When stdin is a pipe or closed (e.g. curl | sh), the initial scan
+// hits EOF. On Unix systems we fall back to /dev/tty so the user can
+// still interact. If /dev/tty is unavailable (Windows, CI), we skip.
 func promptSkillLocation() string {
 	fmt.Println()
 	fmt.Println("Install reins skill for AI tool discovery?")
@@ -277,6 +288,17 @@ func promptSkillLocation() string {
 	scanner := bufio.NewScanner(stdin)
 	if scanner.Scan() {
 		return strings.ToLower(strings.TrimSpace(scanner.Text()))
+	}
+
+	// stdin was a pipe or hit EOF — try /dev/tty as fallback.
+	tty, err := openTTY()
+	if err != nil {
+		return "n"
+	}
+	defer tty.Close()
+	ttyScanner := bufio.NewScanner(tty)
+	if ttyScanner.Scan() {
+		return strings.ToLower(strings.TrimSpace(ttyScanner.Text()))
 	}
 	return "n"
 }

@@ -175,8 +175,16 @@ main() {
   "${DEST}" version 2>/dev/null || true
 
   # Offer skill installation for AI tool discovery.
+  # When piped (curl | sh), stdin is the script stream, not the terminal.
+  # Redirect /dev/tty so the interactive prompt works.
   echo ""
-  "${DEST}" skill || true
+  if [ -t 0 ]; then
+    "${DEST}" skill || true
+  elif [ -e /dev/tty ]; then
+    "${DEST}" skill </dev/tty || true
+  else
+    echo "Non-interactive shell detected. Run 'reins skill' manually to install."
+  fi
 }
 
 main
