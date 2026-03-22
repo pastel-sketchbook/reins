@@ -9,6 +9,22 @@ memory loss.
 
 ## Install
 
+### Binary (recommended)
+
+Prerequisites: `curl`, `tar` (or `unzip` on Windows)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pastel-sketchbook/reins/main/install.sh | sh
+```
+
+Pre-built binaries are available for Linux, macOS, and Windows on both
+amd64 and arm64. See [GitHub Releases](https://github.com/pastel-sketchbook/reins/releases)
+for manual download.
+
+### From source
+
+Prerequisites: Go 1.26+
+
 ```bash
 go install github.com/pastel-sketchbook/reins/cmd/reins@latest
 ```
@@ -202,11 +218,17 @@ Rule files are Markdown with MUST/MUST NOT items and unique IDs:
 
 ## Updating Reins
 
-```bash
-# Install the latest version
-go install github.com/pastel-sketchbook/reins/cmd/reins@latest
+Re-run the same install method, then refresh managed files:
 
-# Refresh managed files in .reins/
+```bash
+# Binary
+curl -fsSL https://raw.githubusercontent.com/pastel-sketchbook/reins/main/install.sh | sh
+
+# -- or from source --
+go install github.com/pastel-sketchbook/reins/cmd/reins@latest
+```
+
+```bash
 reins update
 ```
 

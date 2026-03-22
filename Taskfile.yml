@@ -95,3 +95,78 @@ tasks:
         msg: "VERSION file is missing or empty"
       - sh: '! git rev-parse "v{{.VERSION}}" >/dev/null 2>&1'
         msg: "Tag v{{.VERSION}} already exists"
+
+  # ---------------------------------------------------------------------------
+  # Distribution — cross-platform binary builds
+  # ---------------------------------------------------------------------------
+
+  dist:clean:
+    desc: "Remove dist/ directory"
+    cmds:
+      - rm -rf dist
+
+  dist:build:
+    desc: "Cross-compile binaries for all supported platforms"
+    deps: [dist:clean]
+    vars:
+      PLATFORMS: "linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64"
+    cmds:
+      - |
+        for platform in {{.PLATFORMS}}; do
+          os="${platform%/*}"
+          arch="${platform#*/}"
+          output="dist/reins-${os}-${arch}"
+          if [ "${os}" = "windows" ]; then
+            output="${output}.exe"
+          fi
+          echo "Building ${os}/${arch}..."
+          GOOS="${os}" GOARCH="${arch}" CGO_ENABLED=0 \
+            go build -ldflags '{{.LDFLAGS}}' -o "${output}" ./cmd/reins
+        done
+        echo "All binaries built in dist/"
+
+  dist:package:
+    desc: "Create release archives (tar.gz for unix, zip for windows)"
+    cmds:
+      - |
+        for platform in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+          os="${platform%/*}"
+          arch="${platform#*/}"
+          binary="dist/reins-${os}-${arch}"
+          archive="dist/reins-v{{.VERSION}}-${os}-${arch}.tar.gz"
+          if [ ! -f "${binary}" ]; then
+            echo "SKIP ${binary} (not found)"
+            continue
+          fi
+          tar -czf "${archive}" -C dist "reins-${os}-${arch}"
+          echo "Packaged ${archive}"
+        done
+        for platform in windows/amd64 windows/arm64; do
+          os="${platform%/*}"
+          arch="${platform#*/}"
+          binary="dist/reins-${os}-${arch}.exe"
+          archive="dist/reins-v{{.VERSION}}-${os}-${arch}.zip"
+          if [ ! -f "${binary}" ]; then
+            echo "SKIP ${binary} (not found)"
+            continue
+          fi
+          (cd dist && zip -q "reins-v{{.VERSION}}-${os}-${arch}.zip" "reins-${os}-${arch}.exe")
+          echo "Packaged ${archive}"
+        done
+
+  dist:checksums:
+    desc: "Generate SHA256 checksums for release archives"
+    cmds:
+      - |
+        cd dist
+        shasum -a 256 reins-v{{.VERSION}}-*.tar.gz reins-v{{.VERSION}}-*.zip \
+          > checksums-v{{.VERSION}}.txt
+        echo "Checksums written to dist/checksums-v{{.VERSION}}.txt"
+        cat checksums-v{{.VERSION}}.txt
+
+  dist:all:
+    desc: "Build, package, and checksum all platforms"
+    cmds:
+      - task: dist:build
+      - task: dist:package
+      - task: dist:checksums

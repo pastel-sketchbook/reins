@@ -403,15 +403,44 @@ To apply Reins to a new project:
 
 ## Distribution
 
-Reins is distributed as a **Go CLI binary**. Install it once, then run
+Reins is distributed as a **standalone binary**. Install it once, then run
 `reins init` in any project to bootstrap the framework. No git submodules,
-no package manager dependencies in your project.
+no package manager dependencies, no Go toolchain required.
 
 ### Install
+
+**Binary (recommended)** -- no Go toolchain needed:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pastel-sketchbook/reins/main/install.sh | sh
+```
+
+Options:
+
+```bash
+# Install a specific version
+curl -fsSL ... | sh -s -- --version v0.2.0
+
+# Install to a custom directory
+curl -fsSL ... | sh -s -- --dir /usr/local/bin
+```
+
+Or download directly from
+[GitHub Releases](https://github.com/pastel-sketchbook/reins/releases).
+
+**From source** (requires Go toolchain):
 
 ```bash
 go install github.com/pastel-sketchbook/reins/cmd/reins@latest
 ```
+
+### Supported platforms
+
+| OS | Architecture |
+|----|-------------|
+| Linux | amd64, arm64 |
+| macOS | amd64 (Intel), arm64 (Apple Silicon) |
+| Windows | amd64, arm64 |
 
 ### Quick Start (downstream project)
 
@@ -471,6 +500,15 @@ when the user runs `reins update`.
 | Any AI agent | System prompt | Load `.reins/METHODOLOGY.md` content manually |
 
 ### Updating reins
+
+**Binary:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pastel-sketchbook/reins/main/install.sh | sh
+reins update
+```
+
+**From source:**
 
 ```bash
 go install github.com/pastel-sketchbook/reins/cmd/reins@latest
