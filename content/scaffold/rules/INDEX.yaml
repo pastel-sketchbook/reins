@@ -11,24 +11,40 @@
 #   4. Load all matched rule files and read them in full before coding.
 #
 # Conflict resolution: Specifics > Concerns > Principles (most-specific wins).
-#
-# NOTE: This INDEX.yaml is for the reins framework repo itself.
-# Downstream projects get their own INDEX.yaml via `task init`
-# (see templates/INDEX.yaml).
 
 # ---------------------------------------------------------------------------
-# Tier 1: Principles — always loaded, no triggers needed.
+# Tier 1: Principles — always loaded, sourced from the reins submodule.
 # ---------------------------------------------------------------------------
 principles:
-  - rules/principles/quality.md
+  - .reins/rules/principles/quality.md
 
 # ---------------------------------------------------------------------------
-# Tier 2: Concerns — none for the framework repo itself.
+# Tier 2: Concerns — cross-cutting rules activated by path + optional
+#          content pattern. Add your project's concerns here.
 # ---------------------------------------------------------------------------
-concerns: []
+concerns:
+  # Example: prohibit singletons in any source file that uses the pattern
+  # - trigger: "**/*.{go,ts,js,py}"
+  #   content_pattern: "[Ss]ingleton|getInstance"
+  #   rules:
+  #     - rules/concerns/no-singletons.md
+
+  # Example: secrets/hardcoding rules for config files
+  # - trigger: "**/*.{yaml,yml,json,toml,env}"
+  #   rules:
+  #     - rules/concerns/no-hardcoded-secrets.md
 
 # ---------------------------------------------------------------------------
-# Tier 3: Specifics — none for the framework repo itself.
-#          Language/framework rule templates live in templates/specifics/.
+# Tier 3: Specifics — domain/technology rules activated by file path.
+#          Add your project's language and framework rules here.
 # ---------------------------------------------------------------------------
-specifics: []
+specifics:
+  # Example: Go project
+  # - trigger: "**/*.go"
+  #   rules:
+  #     - rules/specifics/go.md
+
+  # Example: TypeScript project
+  # - trigger: "**/*.{ts,tsx}"
+  #   rules:
+  #     - rules/specifics/typescript.md

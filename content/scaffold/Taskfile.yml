@@ -1,0 +1,35 @@
+version: "3"
+
+# ---------------------------------------------------------------------------
+# Project task automation — adapt to your language and toolchain.
+#
+# The `check:all` task is mandatory. AGENTS.md rule V-01 requires the agent
+# to run it before every commit. Everything else is project-specific.
+# ---------------------------------------------------------------------------
+
+tasks:
+  check:all:
+    desc: "Run all quality gates"
+    deps: [format, lint, test:unit]
+    cmds:
+      - echo "All checks passed!"
+
+  format:
+    desc: "Auto-format source files"
+    cmds:
+      - echo "TODO: add formatter (e.g., gofmt, prettier, rustfmt, black)"
+
+  lint:
+    desc: "Run static analysis"
+    cmds:
+      - echo "TODO: add linter (e.g., golangci-lint, eslint, clippy, ruff)"
+
+  test:unit:
+    desc: "Run unit tests"
+    cmds:
+      - echo "TODO: add test runner (e.g., go test ./..., jest, cargo test, pytest)"
+
+  build:
+    desc: "Compile/build the project"
+    cmds:
+      - echo "TODO: add build command"

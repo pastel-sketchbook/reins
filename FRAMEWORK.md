@@ -400,6 +400,100 @@ To apply Reins to a new project:
 
 ---
 
+## Distribution
+
+Reins is distributed as a **Go CLI binary**. Install it once, then run
+`reins init` in any project to bootstrap the framework. No git submodules,
+no package manager dependencies in your project.
+
+### Install
+
+```bash
+go install github.com/pastel-sketchbook/reins/cmd/reins@latest
+```
+
+### Quick Start (downstream project)
+
+```bash
+cd your-project
+reins init
+# Customize Taskfile.yml, rules/INDEX.yaml, CLAUDE.md
+git add .reins CLAUDE.md rules/ Taskfile.yml
+git commit -m "chore: init reins framework"
+```
+
+### What the CLI embeds
+
+The binary embeds three categories of content via `go:embed`:
+
+| Category | Embedded path | Destination | Overwrite behavior |
+|----------|--------------|-------------|-------------------|
+| **Managed** | `content/managed/` | `.reins/` | Overwritten on `reins update` |
+| **Scaffold** | `content/scaffold/` | Project root | Created once, never overwritten |
+| **Templates** | `content/templates/` | `.reins/templates/` | Refreshed on `reins update` |
+
+**Managed files** are owned by reins: `AGENTS.md`, `agents/rule-guard.md`,
+`rules/principles/quality.md`. These are refreshed to the latest version
+when the user runs `reins update`.
+
+**Scaffold files** are project-owned: `CLAUDE.md`, `Taskfile.yml`,
+`rules/INDEX.yaml`. Created once during `reins init`, never touched again.
+The user customizes these for their project.
+
+**Template files** are language/framework rule templates (e.g.,
+`specifics/go.md`) that the user manually copies into `rules/specifics/`.
+
+### What lives where (downstream project)
+
+| Location | Content | Managed by |
+|----------|---------|------------|
+| `.reins/AGENTS.md` | Core methodology (TDD, commits, quality) | Reins CLI |
+| `.reins/rules/principles/` | Universal quality principles | Reins CLI |
+| `.reins/agents/rule-guard.md` | Independent verification agent | Reins CLI |
+| `.reins/templates/` | Language rule templates for manual copying | Reins CLI |
+| `.reins/VERSION` | Installed reins version | Reins CLI |
+| `CLAUDE.md` | Bridge file — loads `.reins/AGENTS.md` | Project |
+| `rules/INDEX.yaml` | Trigger mapping for this project | Project |
+| `rules/specifics/` | Language/framework rules | Project |
+| `rules/concerns/` | Cross-cutting rules | Project |
+| `Taskfile.yml` | Build/lint/test automation | Project |
+
+### How AI tools discover reins
+
+| Tool | Entry point | Mechanism |
+|------|------------|-----------|
+| Claude Code | `CLAUDE.md` | Auto-read at project root; bridge points to `.reins/AGENTS.md` |
+| OpenCode | `AGENTS.md` | Symlink or copy from `.reins/AGENTS.md` |
+| Cursor | `.cursorrules` | Reference `.reins/AGENTS.md` in project instructions |
+| Any Claude agent | System prompt | Load `.reins/AGENTS.md` content manually |
+
+### Updating reins
+
+```bash
+go install github.com/pastel-sketchbook/reins/cmd/reins@latest
+reins update
+```
+
+`reins update` overwrites managed files in `.reins/` and refreshes
+templates, but never touches project-owned files. To pick up scaffold
+improvements, diff manually:
+
+```bash
+diff CLAUDE.md .reins/scaffold/CLAUDE.md
+diff rules/INDEX.yaml .reins/scaffold/rules/INDEX.yaml
+```
+
+### CLI reference
+
+| Command | Description |
+|---------|-------------|
+| `reins init` | Bootstrap reins in the current project |
+| `reins update` | Refresh managed files to latest version |
+| `reins list` | List available language/framework templates |
+| `reins version` | Print installed reins version |
+
+---
+
 ## What Reins Is Not
 
 - **Not a replacement for static analysis, linting, or tests.** Those are
