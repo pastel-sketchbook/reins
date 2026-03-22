@@ -373,22 +373,22 @@ To apply Reins to a new project:
        desc: "Run all quality gates"
        deps: [format, lint, test:unit]
        cmds:
-         - echo "All checks passed"
+         - echo "All checks passed!"
      format:
        cmds:
-         - echo "TODO: add formatter (e.g., prettier, gofmt, rustfmt)"
+         - echo "ERROR: configure the 'format' task" && exit 1
      lint:
        cmds:
-         - echo "TODO: add linter (e.g., eslint, golangci-lint, clippy)"
+         - echo "ERROR: configure the 'lint' task" && exit 1
      test:unit:
        cmds:
-         - echo "TODO: add test runner (e.g., jest, go test, cargo test)"
+         - echo "ERROR: configure the 'test:unit' task" && exit 1
      build:
        cmds:
-         - echo "TODO: add build command"
+         - echo "ERROR: configure the 'build' task" && exit 1
    ```
-   Replace each `echo` with your toolchain's command. The structure
-   (`check:all` depending on `format`, `lint`, `test:unit`) is the
+   Replace each `exit 1` placeholder with your toolchain's command. The
+   structure (`check:all` depending on `format`, `lint`, `test:unit`) is the
    contract AGENTS.md rule V-01 relies on.
 
 3. **rules/** -- Write rules specific to your project's architecture,

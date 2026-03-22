@@ -5,6 +5,10 @@ version: "3"
 #
 # The `check:all` task is mandatory. AGENTS.md rule V-01 requires the agent
 # to run it before every commit. Everything else is project-specific.
+#
+# IMPORTANT: Unconfigured tasks exit 1 on purpose. Replace each placeholder
+# with your toolchain's command. Until then, `task check:all` will fail —
+# this prevents the agent from committing unchecked code.
 # ---------------------------------------------------------------------------
 
 tasks:
@@ -17,19 +21,19 @@ tasks:
   format:
     desc: "Auto-format source files"
     cmds:
-      - echo "TODO: add formatter (e.g., gofmt, prettier, rustfmt, black)"
+      - echo "ERROR: configure the 'format' task (e.g., gofmt, prettier, rustfmt, black)" && exit 1
 
   lint:
     desc: "Run static analysis"
     cmds:
-      - echo "TODO: add linter (e.g., golangci-lint, eslint, clippy, ruff)"
+      - echo "ERROR: configure the 'lint' task (e.g., golangci-lint, eslint, clippy, ruff)" && exit 1
 
   test:unit:
     desc: "Run unit tests"
     cmds:
-      - echo "TODO: add test runner (e.g., go test ./..., jest, cargo test, pytest)"
+      - echo "ERROR: configure the 'test:unit' task (e.g., go test ./..., jest, cargo test, pytest)" && exit 1
 
   build:
     desc: "Compile/build the project"
     cmds:
-      - echo "TODO: add build command"
+      - echo "ERROR: configure the 'build' task" && exit 1
