@@ -47,3 +47,51 @@ tasks:
     desc: "Run unit tests"
     cmds:
       - go test ./...
+
+  version:
+    desc: "Print the current version"
+    cmds:
+      - echo "{{.VERSION}}"
+    silent: true
+
+  version:patch:
+    desc: "Bump patch version (0.1.0 → 0.1.1)"
+    cmds:
+      - |
+        IFS='.' read -r major minor patch < VERSION
+        patch=$((patch + 1))
+        echo "${major}.${minor}.${patch}" > VERSION
+        cat VERSION
+    silent: true
+
+  version:minor:
+    desc: "Bump minor version (0.1.0 → 0.2.0)"
+    cmds:
+      - |
+        IFS='.' read -r major minor patch < VERSION
+        minor=$((minor + 1))
+        echo "${major}.${minor}.0" > VERSION
+        cat VERSION
+    silent: true
+
+  version:major:
+    desc: "Bump major version (0.1.0 → 1.0.0)"
+    cmds:
+      - |
+        IFS='.' read -r major minor patch < VERSION
+        major=$((major + 1))
+        echo "${major}.0.0" > VERSION
+        cat VERSION
+    silent: true
+
+  version:tag:
+    desc: "Create and push a git tag from VERSION"
+    cmds:
+      - git tag "v{{.VERSION}}"
+      - git push origin "v{{.VERSION}}"
+      - echo "Tagged and pushed v{{.VERSION}}"
+    preconditions:
+      - sh: '[ -n "$(cat VERSION 2>/dev/null)" ]'
+        msg: "VERSION file is missing or empty"
+      - sh: '! git rev-parse "v{{.VERSION}}" >/dev/null 2>&1'
+        msg: "Tag v{{.VERSION}} already exists"
