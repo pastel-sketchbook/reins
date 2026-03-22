@@ -18,7 +18,7 @@ tasks:
 
   check:all:
     desc: "Run all quality gates"
-    deps: [format, lint, vet]
+    deps: [format, lint, vet, test:unit]
     cmds:
       - echo "All checks passed!"
 
@@ -41,3 +41,8 @@ tasks:
     desc: "Remove build artifacts"
     cmds:
       - rm -f reins
+
+  test:unit:
+    desc: "Run unit tests"
+    cmds:
+      - go test ./...
