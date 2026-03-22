@@ -1,0 +1,206 @@
+version: "3"
+env:
+  PGM_NAME: ge-kv-store
+tasks:
+  check:all:
+    desc: "Run all code quality checks: typo, format, lint, and unit tests"
+    deps: [typo, format, lint, test:unit]
+    cmds:
+      - echo "All checks passed!"
+  build:
+    deps: [typo, format, lint]
+    cmds:
+      - go mod tidy
+      - VERSION=$(cat VERSION) && go build -ldflags "-X main.serviceVersion=$VERSION" -o $PGM_NAME ./cmd/server
+  dev:
+    cmds:
+      - air
+  format:
+    cmds:
+      - go fmt
+      - gci write -s standard -s default -s localmodule $(find . -name "*.go" | grep -v vendor)
+  lint:
+    deps: [lint:wsl]
+    cmds:
+      - golangci-lint run -v
+  lint:wsl:
+    cmds:
+      - golangci-lint run --no-config --enable wsl_v5 --fix
+  loc:
+    cmds:
+      - tokei . --exclude vendor
+  run:
+    deps: [build]
+    cmds:
+      - ./$PGM_NAME
+
+  run:debug:
+    desc: "Run the built binary with debug logging (LOG_LEVEL=DEBUG) and source .env if present"
+    deps: [build]
+    cmds:
+      - "if [ -f .env ]; then set -a && . .env && set +a; fi; LOG_LEVEL=DEBUG ./$PGM_NAME"
+  test:unit:
+    cmds:
+      - go test -v ./...
+  tidy:
+    cmds:
+      - go mod tidy
+  typo:
+    cmds:
+      - typos $(find . -name "*.go" | grep -v vendor)
+  typo:fix:
+    cmds:
+      - typos -w $(find . -name "*.go" | grep -v vendor)
+  version:show:
+    cmds:
+      - 'printf ''Version: %s\n'' "$(cat VERSION)"'
+
+  version:patch:
+    desc: "Bump patch version (0.1.0 -> 0.1.1), commit, and tag"
+    cmds:
+      - |
+        current=$(cat VERSION)
+        IFS='.' read -r major minor patch <<< "$current"
+        new_version="$major.$minor.$((patch + 1))"
+        echo "$new_version" > VERSION
+        echo "Bumped version: $current -> $new_version"
+        git add VERSION
+        git commit -m "chore(release): $new_version"
+        git tag "v$new_version"
+        echo "Created tag v$new_version"
+
+  version:minor:
+    desc: "Bump minor version (0.1.0 -> 0.2.0), commit, and tag"
+    cmds:
+      - |
+        current=$(cat VERSION)
+        IFS='.' read -r major minor patch <<< "$current"
+        new_version="$major.$((minor + 1)).0"
+        echo "$new_version" > VERSION
+        echo "Bumped version: $current -> $new_version"
+        git add VERSION
+        git commit -m "feat!: $new_version"
+        git tag "v$new_version"
+        echo "Created tag v$new_version"
+
+  version:major:
+    desc: "Bump major version (0.1.0 -> 1.0.0), commit, and tag"
+    cmds:
+      - |
+        current=$(cat VERSION)
+        IFS='.' read -r major minor patch <<< "$current"
+        new_version="$((major + 1)).0.0"
+        echo "$new_version" > VERSION
+        echo "Bumped version: $current -> $new_version"
+        git add VERSION
+        git commit -m "BREAKING CHANGE: $new_version"
+        git tag "v$new_version"
+        echo "Created tag v$new_version"
+
+  version:tag:
+    desc: "Create git tag for current version without bumping"
+    cmds:
+      - |
+        VERSION=$(cat VERSION)
+        git tag "v$VERSION"
+        echo "Created tag v$VERSION"
+
+  build:release:
+    desc: "Build binary with embedded version"
+    deps: [format, lint]
+    cmds:
+      - VERSION=$(cat VERSION) && go build -ldflags "-X main.serviceVersion=$VERSION" -o $PGM_NAME-$VERSION ./cmd/server
+
+  # ---------------------------------------------------------------------------
+  # Benchmark suites  (go test -bench)
+  # ---------------------------------------------------------------------------
+
+  bench:all:
+    desc: "Run ALL benchmarks across every package"
+    cmds:
+      - go test -bench=. -benchmem -count=1 -timeout=5m ./internal/...
+
+  bench:store:
+    desc: "Run store benchmarks (CPU, heap, mutex contention)"
+    cmds:
+      - go test -bench=. -benchmem -count=1 ./internal/store/
+
+  bench:handler:
+    desc: "Run handler benchmarks (JSON alloc cost)"
+    cmds:
+      - go test -bench=. -benchmem -count=1 ./internal/handler/
+
+  bench:middleware:
+    desc: "Run middleware benchmarks (rate limiter + validator)"
+    cmds:
+      - go test -bench=. -benchmem -count=1 ./internal/middleware/
+
+  bench:logging:
+    desc: "Run logging benchmarks (traceHandler overhead)"
+    cmds:
+      - go test -bench=. -benchmem -count=1 ./internal/logging/
+
+  # ---------------------------------------------------------------------------
+  # pprof profiling  (scripts/pprof-*.sh)
+  # ---------------------------------------------------------------------------
+
+  pprof:cpu:
+    desc: "Capture CPU profile (default: store package)"
+    cmds:
+      - ./scripts/pprof-cpu.sh {{.CLI_ARGS | default "./internal/store"}}
+
+  pprof:mem:
+    desc: "Capture heap/allocation profile"
+    cmds:
+      - ./scripts/pprof-mem.sh {{.CLI_ARGS | default "./internal/store"}}
+
+  pprof:mutex:
+    desc: "Capture mutex contention profile"
+    cmds:
+      - ./scripts/pprof-mutex.sh {{.CLI_ARGS | default "./internal/store"}}
+
+  pprof:block:
+    desc: "Capture goroutine blocking profile"
+    cmds:
+      - ./scripts/pprof-block.sh {{.CLI_ARGS | default "./internal/store"}}
+
+  pprof:trace:
+    desc: "Capture execution trace"
+    cmds:
+      - ./scripts/pprof-trace.sh {{.CLI_ARGS | default "./internal/store"}}
+
+  pprof:all:
+    desc: "Capture ALL profiles (cpu, mem, mutex, block, trace) in one run"
+    cmds:
+      - ./scripts/pprof-all.sh {{.CLI_ARGS | default "./internal/store"}}
+
+  # ---------------------------------------------------------------------------
+  # k6 load tests
+  # ---------------------------------------------------------------------------
+
+  loadtest:k6:
+    desc: "Run k6 load test against local server"
+    cmds:
+      - k6 run scripts/k6/bench.js
+
+  loadtest:k6:small:
+    desc: "Run k6 small load test (5 VUs)"
+    cmds:
+      - k6 run scripts/k6/small.js
+
+  loadtest:k6:normal:
+    desc: "Run k6 normal load test (25 VUs)"
+    cmds:
+      - k6 run scripts/k6/normal.js
+
+  loadtest:k6:heavy:
+    desc: "Run k6 heavy load test (100 VUs)"
+    cmds:
+      - k6 run scripts/k6/heavy.js
+
+  loadtest:k6:dev:
+    desc: "Run k6 load test against dev server"
+    env:
+      K6_ENDPOINT: "https://api.dev.example.com"
+    cmds:
+      - k6 run -e K6_ENDPOINT=https://api.dev.example.com scripts/k6/bench.js

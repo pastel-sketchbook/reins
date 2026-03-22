@@ -1,0 +1,53 @@
+# rules/INDEX.yaml — Trigger mapping for the layered rule system
+#
+# The agent reads this file at the start of every task (AGENTS.md L-01).
+#
+# Consumption protocol:
+#   1. Load all files under `principles:` unconditionally.
+#   2. For each file being modified, match its path against `trigger:`
+#      globs in `concerns:` and `specifics:`.
+#   3. For concerns with `content_pattern:`, scan the target file's
+#      content. Load the concern's rules only if the regex matches.
+#   4. Load all matched rule files and read them in full before coding.
+#
+# Conflict resolution: Specifics > Concerns > Principles (most-specific wins).
+
+# ---------------------------------------------------------------------------
+# Tier 1: Principles — always loaded, no triggers needed.
+# ---------------------------------------------------------------------------
+principles:
+  - rules/principles/quality.md
+
+# ---------------------------------------------------------------------------
+# Tier 2: Concerns — cross-cutting rules activated by path + optional
+#          content pattern.
+#
+#   trigger:         Glob pattern matched against the modified file path.
+#   content_pattern: (optional) Regex matched against the file's content.
+#                    If present, the concern loads ONLY when both the
+#                    trigger glob AND the content regex match.
+#                    If absent, the trigger glob alone is sufficient.
+#   rules:           List of rule files to load when matched.
+# ---------------------------------------------------------------------------
+concerns:
+  # Example: prohibit singletons in any source file that uses the pattern
+  # - trigger: "**/*.{go,ts,js,py}"
+  #   content_pattern: "[Ss]ingleton|getInstance"
+  #   rules:
+  #     - rules/concerns/no-singletons.md
+
+  # Example: secrets/hardcoding rules for config files
+  # - trigger: "**/*.{yaml,yml,json,toml,env}"
+  #   rules:
+  #     - rules/concerns/no-hardcoded-secrets.md
+
+# ---------------------------------------------------------------------------
+# Tier 3: Specifics — domain/technology rules activated by file path.
+#
+#   trigger:  Glob pattern matched against the modified file path.
+#   rules:    List of rule files to load when matched.
+# ---------------------------------------------------------------------------
+specifics:
+  - trigger: "**/*.go"
+    rules:
+      - rules/specifics/go.md
