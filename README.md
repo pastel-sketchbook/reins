@@ -229,6 +229,10 @@ diff rules/INDEX.yaml .reins/scaffold/rules/INDEX.yaml
 | `reins list` | List available language/framework templates |
 | `reins version` | Print installed reins version |
 
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
 ## Design
 
 For the full rationale, design principles, and component details, see
