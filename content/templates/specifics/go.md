@@ -1,4 +1,4 @@
-# Go / Echo / badgerDB — Specific Rules
+# Go — Specific Rules
 
 These rules apply when modifying `.go` files in this project.
 Loaded via `rules/INDEX.yaml` trigger: `**/*.go`.
@@ -16,19 +16,6 @@ Loaded via `rules/INDEX.yaml` trigger: `**/*.go`.
 - **S-GO-07** — MUST favor standard-library helpers (`time.Now().UnixMilli()`, `net/url.URL.Redacted()`, etc.) over reimplementing common behavior.
 - **S-GO-08** — MUST format all code with `gofmt` and organize imports with `goimports`.
 - **S-GO-09** — MUST pass `golangci-lint` with zero warnings before committing.
-
-## Echo Framework
-
-- **S-ECHO-01** — MUST use Echo's built-in error handler (`e.HTTPErrorHandler`) for centralized error responses.
-- **S-ECHO-02** — MUST follow Echo routing conventions: one handler function per HTTP method per route.
-- **S-ECHO-03** — MUST use middleware for cross-cutting concerns (logging, recovery, CORS). Do not inline these in handlers.
-- **S-ECHO-04** — MUST return consistent JSON response formats from all handlers.
-
-## badgerDB
-
-- **S-BADGER-01** — MUST use badgerDB's native types and operations for key-value work. Do not wrap with unnecessary abstractions.
-- **S-BADGER-02** — MUST handle badgerDB connection lifecycle properly (open, close, garbage collection).
-- **S-BADGER-03** — MUST propagate errors from badgerDB operations without swallowing them.
 
 ## Verification
 

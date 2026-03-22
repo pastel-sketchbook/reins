@@ -21,6 +21,8 @@ func TestRunInit_CreatesExpectedFiles(t *testing.T) {
 		".reins/rules/principles/quality.md",
 		".reins/VERSION",
 		".reins/templates/specifics/go.md",
+		".reins/templates/specifics/echo.md",
+		".reins/templates/specifics/badgerdb.md",
 		// Scaffold files
 		"CLAUDE.md",
 		"Taskfile.yml",
