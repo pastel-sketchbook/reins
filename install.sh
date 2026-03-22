@@ -76,7 +76,8 @@ resolve_version() {
     return
   fi
   need curl
-  tag=$(curl -fsSL -o /dev/null -w '%{redirect_url}' \
+  # Do NOT follow redirects (-L) here; we need the 302 Location URL.
+  tag=$(curl -fsS -o /dev/null -w '%{redirect_url}' \
     "https://github.com/${REPO}/releases/latest" 2>/dev/null \
     | grep -o '[^/]*$') || true
   [ -n "$tag" ] || die "Could not determine latest release"
