@@ -318,6 +318,7 @@ project-root/
 ├── AGENTS.md                  # Core agent instructions (minimal)
 ├── FRAMEWORK.md               # This file (framework design)
 ├── Taskfile.yml               # Task automation (mechanical verification)
+├── AUTOPILOT.md               # Autopilot goal/constraints (optional)
 ├── .editorconfig              # Editor configuration
 │
 ├── rules/                     # Layered rule system
@@ -437,8 +438,8 @@ The binary embeds three categories of content via `go:embed`:
 when the user runs `reins update`.
 
 **Scaffold files** are project-owned: `CLAUDE.md`, `Taskfile.yml`,
-`rules/INDEX.yaml`. Created once during `reins init`, never touched again.
-The user customizes these for their project.
+`rules/INDEX.yaml`, `AUTOPILOT.md`. Created once during `reins init`,
+never touched again. The user customizes these for their project.
 
 **Template files** are language/framework rule templates (e.g.,
 `specifics/go.md`) that the user manually copies into `rules/specifics/`.
@@ -453,6 +454,7 @@ The user customizes these for their project.
 | `.reins/templates/` | Language rule templates for manual copying | Reins CLI |
 | `.reins/VERSION` | Installed reins version | Reins CLI |
 | `CLAUDE.md` | Bridge file — loads `.reins/AGENTS.md` | Project |
+| `AUTOPILOT.md` | Autopilot goal, constraints, iteration protocol | Project |
 | `rules/INDEX.yaml` | Trigger mapping for this project | Project |
 | `rules/specifics/` | Language/framework rules | Project |
 | `rules/concerns/` | Cross-cutting rules | Project |
@@ -481,6 +483,7 @@ improvements, diff manually:
 ```bash
 diff CLAUDE.md .reins/scaffold/CLAUDE.md
 diff rules/INDEX.yaml .reins/scaffold/rules/INDEX.yaml
+diff AUTOPILOT.md .reins/scaffold/AUTOPILOT.md
 ```
 
 ### CLI reference

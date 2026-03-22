@@ -123,8 +123,9 @@ func runInit(ctx context.Context) int {
 	fmt.Println("  3. Copy a language template if needed:")
 	fmt.Println("       reins list              # see available templates")
 	fmt.Println("       cp .reins/templates/specifics/go.md rules/specifics/go.md")
-	fmt.Println("  4. Commit:")
-	fmt.Println("       git add .reins CLAUDE.md rules/ Taskfile.yml")
+	fmt.Println("  4. (Optional) Edit AUTOPILOT.md — define a goal for autonomous agent sessions.")
+	fmt.Println("  5. Commit:")
+	fmt.Println("       git add .reins CLAUDE.md rules/ Taskfile.yml AUTOPILOT.md")
 	fmt.Println("       git commit -m 'chore: init reins framework'")
 	fmt.Println()
 
@@ -175,10 +176,11 @@ func runUpdate(ctx context.Context) int {
 	slog.InfoContext(ctx, "update complete", "version", version)
 
 	fmt.Println()
-	fmt.Println("Project-owned files were not modified (CLAUDE.md, Taskfile.yml, rules/INDEX.yaml).")
+	fmt.Println("Project-owned files were not modified (CLAUDE.md, Taskfile.yml, rules/INDEX.yaml, AUTOPILOT.md).")
 	fmt.Println("To check for scaffold changes:")
 	fmt.Println("  diff CLAUDE.md .reins/scaffold/CLAUDE.md")
 	fmt.Println("  diff rules/INDEX.yaml .reins/scaffold/rules/INDEX.yaml")
+	fmt.Println("  diff AUTOPILOT.md .reins/scaffold/AUTOPILOT.md")
 	fmt.Println()
 
 	return 0

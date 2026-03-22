@@ -80,6 +80,7 @@ func TestRunInit_CreatesExpectedFiles(t *testing.T) {
 		"CLAUDE.md",
 		"Taskfile.yml",
 		"rules/INDEX.yaml",
+		"AUTOPILOT.md",
 	}
 
 	for _, f := range wantFiles {

@@ -82,3 +82,12 @@ For every task, follow this sequence. Do not skip steps.
 - **L-04** — For `concerns:` entries with `content_pattern:`, MUST scan the target file content and load only if the pattern matches.
 - **L-05** — MUST read each loaded rule file in full before writing code. Do not rely on memory of previous sessions.
 - **L-06** — When rules from different tiers conflict, most-specific wins: Specifics > Concerns > Principles.
+
+## What to Do Next
+
+<!-- Persistent backlog — survives across agent sessions. -->
+<!-- The agent reads this section at the start of each session to -->
+<!-- pick up where the previous session left off. -->
+<!-- Priority order: top = highest priority. Remove completed items. -->
+
+1. (Add your next task here.)

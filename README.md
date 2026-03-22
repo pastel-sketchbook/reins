@@ -36,6 +36,7 @@ git commit -m "chore: init reins framework"
 | `CLAUDE.md` | Bridge file -- tells Claude-based agents to load `.reins/AGENTS.md` |
 | `rules/INDEX.yaml` | Rule trigger mapping -- references `.reins/` principles and your local rules |
 | `Taskfile.yml` | Task automation skeleton -- replace the TODO placeholders with your toolchain |
+| `AUTOPILOT.md` | Autopilot template -- define a goal for autonomous agent sessions |
 
 It also creates empty `rules/specifics/`, `rules/concerns/`, and
 `rules/principles/` directories for your project-specific rules.
@@ -76,6 +77,17 @@ that verifies it.
 A single `task check:all` command runs all quality gates (format, lint,
 test). The agent runs this before every commit.
 
+### Autopilot support (`program.md` + backlog)
+
+Two lightweight conventions enable autonomous agent sessions:
+
+- **`AUTOPILOT.md`** -- A scaffold template defining goal, constraints,
+  iteration protocol, and success criteria. The agent uses this as its
+  prompt for self-directed work loops.
+- **"What to do next"** -- A backlog section in `AGENTS.md` that
+  persists across sessions. The agent reads it at session start to pick
+  up where the previous session left off.
+
 ## Project Layout
 
 After `reins init`, your project looks like this:
@@ -91,6 +103,7 @@ your-project/
 │
 ├── CLAUDE.md                        # bridge file (generated, customizable)
 ├── Taskfile.yml                     # your project's task automation
+├── AUTOPILOT.md                     # autopilot goal/constraints (optional)
 │
 └── rules/                           # your project-specific rules
     ├── INDEX.yaml                   # trigger mapping
