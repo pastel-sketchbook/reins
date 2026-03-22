@@ -28,7 +28,9 @@ principles:
 concerns: []
 
 # ---------------------------------------------------------------------------
-# Tier 3: Specifics — none for the framework repo itself.
-#          Language/framework rule templates live in templates/specifics/.
+# Tier 3: Specifics — language/technology rules for the reins Go codebase.
 # ---------------------------------------------------------------------------
-specifics: []
+specifics:
+  - trigger: "**/*.go"
+    rules:
+      - rules/specifics/go.md
