@@ -74,6 +74,11 @@ func runInit() int {
 		return 1
 	}
 
+	// Warn if not running from a project root (no .git directory).
+	if _, err := os.Stat(".git"); errors.Is(err, fs.ErrNotExist) {
+		fmt.Fprintln(os.Stderr, "reins: warning: no .git directory found. Are you in the project root?")
+	}
+
 	fmt.Println("Initializing reins...")
 	fmt.Println()
 
@@ -131,6 +136,14 @@ func runUpdate() int {
 	if _, err := os.Stat(managedDir); errors.Is(err, fs.ErrNotExist) {
 		fmt.Fprintln(os.Stderr, "reins: not initialized. Run 'reins init' first.")
 		return 1
+	}
+
+	// Check if already at the current version.
+	if installed, err := os.ReadFile(versionFile); err == nil {
+		if strings.TrimSpace(string(installed)) == version {
+			fmt.Printf("Managed files already at version %s.\n", version)
+			return 0
+		}
 	}
 
 	fmt.Println("Updating managed files...")
