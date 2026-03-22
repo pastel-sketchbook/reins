@@ -72,7 +72,7 @@ For every task, follow this sequence. Do not skip steps.
 
 - **V-01** — MUST run `task check:all` before every commit.
 - **V-02** — MUST fix all issues reported by verification tools before committing.
-- **V-03** — MUST NOT self-review against rules. Request rule-guard verification.
+- **V-03** — SHOULD NOT self-review against rules. Request rule-guard verification when available. (Enforcement depends on tooling; see `agents/rule-guard.md`.)
 
 ## Rule Loading
 

@@ -97,7 +97,7 @@ Detail that the agent only needs situationally should be loaded on demand,
 not permanently occupying context.
 
 **Status:** Implemented. `AGENTS.md` in repository root. 84 lines,
-35 MUST/MUST NOT rules with IDs, zero project-specific content.
+34 MUST/MUST NOT rules with IDs, zero project-specific content.
 
 ---
 
