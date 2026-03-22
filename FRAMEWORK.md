@@ -75,7 +75,7 @@ The AI layer does not replace the traditional layer.
 
 ## Components
 
-### 1. Core Agent Instructions (`AGENTS.md`)
+### 1. Core Agent Instructions (`METHODOLOGY.md`)
 
 The minimal, always-loaded instruction set for the AI agent. Contains
 methodology rules, the expected agent workflow, and a pointer to the
@@ -96,8 +96,8 @@ the core, the higher the probability it survives compression intact.
 Detail that the agent only needs situationally should be loaded on demand,
 not permanently occupying context.
 
-**Status:** Implemented. `AGENTS.md` in repository root. 84 lines,
-34 MUST/MUST NOT rules with IDs, zero project-specific content.
+**Status:** Implemented. `.reins/METHODOLOGY.md` in downstream projects.
+95 lines, 34 MUST/MUST NOT rules with IDs, zero project-specific content.
 
 ---
 
@@ -257,10 +257,10 @@ context compaction occurs.
 
 **Approaches:**
 - **Re-injection hook:** Some tools support hooks triggered on context
-  compaction. A hook MAY re-inject `AGENTS.md` and active agent
+  compaction. A hook MAY re-inject `METHODOLOGY.md` and active agent
   definitions mechanically.
 - **Instruction minimization:** Already addressed by Component 1's
-  design constraint (keep AGENTS.md minimal).
+  design constraint (keep METHODOLOGY.md minimal).
 - **Externalized detail:** Already addressed by Component 2 (rules
   loaded on demand, not persisted in context).
 
@@ -345,9 +345,9 @@ before it.
 
 | Phase | Component | Prerequisite | Outcome |
 |-------|-----------|--------------|---------|
-| 1 | Core Agent Instructions (`AGENTS.md`) | None | Agent follows methodology |
+| 1 | Core Agent Instructions (`METHODOLOGY.md`) | None | Agent follows methodology |
 | 2 | Task Automation (`Taskfile.yml`) | None | Mechanical verification works |
-| 3 | Layered Rule System (`rules/`) | AGENTS.md references rules | Agent loads project-specific constraints |
+| 3 | Layered Rule System (`rules/`) | METHODOLOGY.md references rules | Agent loads project-specific constraints |
 | 4 | Independent Verification Agent | Rules exist to verify against | Separate do-from-check enforcement |
 
 Components 5-7 are extension points, not framework deliverables. Each
@@ -360,7 +360,7 @@ project extends them based on its tooling, scale, and needs. See the
 
 To apply Reins to a new project:
 
-1. **AGENTS.md** -- Use the universal methodology rules as-is. Add a
+1. **AGENTS.md** -- The bridge file points to `.reins/METHODOLOGY.md`. Add a
    project context section that names the project and points to `rules/`.
 
 2. **Taskfile.yml** -- Adapt tasks to your language and toolchain. The
@@ -390,7 +390,7 @@ To apply Reins to a new project:
    ```
    Replace each `exit 1` placeholder with your toolchain's command. The
    structure (`check:all` depending on `format`, `lint`, `test:unit`) is the
-   contract AGENTS.md rule V-01 relies on.
+    contract METHODOLOGY.md rule V-01 relies on.
 
 3. **rules/** -- Write rules specific to your project's architecture,
    frameworks, and domain. Start with Principles (universal to your
@@ -418,8 +418,8 @@ go install github.com/pastel-sketchbook/reins/cmd/reins@latest
 ```bash
 cd your-project
 reins init
-# Customize Taskfile.yml, rules/INDEX.yaml, CLAUDE.md
-git add .reins CLAUDE.md rules/ Taskfile.yml
+# Customize Taskfile.yml, rules/INDEX.yaml, AGENTS.md
+git add .reins AGENTS.md rules/ Taskfile.yml
 git commit -m "chore: init reins framework"
 ```
 
@@ -433,11 +433,11 @@ The binary embeds three categories of content via `go:embed`:
 | **Scaffold** | `content/scaffold/` | Project root | Created once, never overwritten |
 | **Templates** | `content/templates/` | `.reins/templates/` | Refreshed on `reins update` |
 
-**Managed files** are owned by reins: `AGENTS.md`, `agents/rule-guard.md`,
+**Managed files** are owned by reins: `METHODOLOGY.md`, `agents/rule-guard.md`,
 `rules/principles/quality.md`. These are refreshed to the latest version
 when the user runs `reins update`.
 
-**Scaffold files** are project-owned: `CLAUDE.md`, `Taskfile.yml`,
+**Scaffold files** are project-owned: `AGENTS.md`, `Taskfile.yml`,
 `rules/INDEX.yaml`, `AUTOPILOT.md`. Created once during `reins init`,
 never touched again. The user customizes these for their project.
 
@@ -448,12 +448,12 @@ never touched again. The user customizes these for their project.
 
 | Location | Content | Managed by |
 |----------|---------|------------|
-| `.reins/AGENTS.md` | Core methodology (TDD, commits, quality) | Reins CLI |
+| `.reins/METHODOLOGY.md` | Core methodology (TDD, commits, quality) | Reins CLI |
 | `.reins/rules/principles/` | Universal quality principles | Reins CLI |
 | `.reins/agents/rule-guard.md` | Independent verification agent | Reins CLI |
 | `.reins/templates/` | Language rule templates for manual copying | Reins CLI |
 | `.reins/VERSION` | Installed reins version | Reins CLI |
-| `CLAUDE.md` | Bridge file — loads `.reins/AGENTS.md` | Project |
+| `AGENTS.md` | Bridge file — loads `.reins/METHODOLOGY.md` | Project |
 | `AUTOPILOT.md` | Autopilot goal, constraints, iteration protocol | Project |
 | `rules/INDEX.yaml` | Trigger mapping for this project | Project |
 | `rules/specifics/` | Language/framework rules | Project |
@@ -464,10 +464,10 @@ never touched again. The user customizes these for their project.
 
 | Tool | Entry point | Mechanism |
 |------|------------|-----------|
-| Claude Code | `CLAUDE.md` | Auto-read at project root; bridge points to `.reins/AGENTS.md` |
-| OpenCode | `AGENTS.md` | Symlink or copy from `.reins/AGENTS.md` |
-| Cursor | `.cursorrules` | Reference `.reins/AGENTS.md` in project instructions |
-| Any Claude agent | System prompt | Load `.reins/AGENTS.md` content manually |
+| OpenCode | `AGENTS.md` | Auto-read at project root; bridge points to `.reins/METHODOLOGY.md` |
+| Claude Code | `CLAUDE.md` | Copy from `AGENTS.md`; Claude Code auto-reads CLAUDE.md at project root |
+| Cursor | `.cursorrules` | Reference `.reins/METHODOLOGY.md` in project instructions |
+| Any AI agent | System prompt | Load `.reins/METHODOLOGY.md` content manually |
 
 ### Updating reins
 
@@ -481,7 +481,7 @@ templates, but never touches project-owned files. To pick up scaffold
 improvements, diff manually:
 
 ```bash
-diff CLAUDE.md .reins/scaffold/CLAUDE.md
+diff AGENTS.md .reins/scaffold/AGENTS.md
 diff rules/INDEX.yaml .reins/scaffold/rules/INDEX.yaml
 diff AUTOPILOT.md .reins/scaffold/AUTOPILOT.md
 ```
@@ -505,7 +505,7 @@ diff AUTOPILOT.md .reins/scaffold/AUTOPILOT.md
 - **Not an AI agent.** It is instructions, rules, and infrastructure that
   shape how an AI agent behaves.
 
-- **Not documentation about the project.** AGENTS.md tells the agent how
+- **Not documentation about the project.** METHODOLOGY.md tells the agent how
   to work. Rules tell it what constraints to follow. Neither describes
   the system architecture in narrative form.
 

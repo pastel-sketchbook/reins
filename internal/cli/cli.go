@@ -125,7 +125,7 @@ func runInit(ctx context.Context) int {
 	fmt.Println("       cp .reins/templates/specifics/go.md rules/specifics/go.md")
 	fmt.Println("  4. (Optional) Edit AUTOPILOT.md — define a goal for autonomous agent sessions.")
 	fmt.Println("  5. Commit:")
-	fmt.Println("       git add .reins CLAUDE.md rules/ Taskfile.yml AUTOPILOT.md")
+	fmt.Println("       git add .reins AGENTS.md rules/ Taskfile.yml AUTOPILOT.md")
 	fmt.Println("       git commit -m 'chore: init reins framework'")
 	fmt.Println()
 
@@ -133,7 +133,7 @@ func runInit(ctx context.Context) int {
 }
 
 // runUpdate refreshes managed files in .reins/ without touching project-owned
-// files (CLAUDE.md, Taskfile.yml, rules/INDEX.yaml).
+// files (AGENTS.md, Taskfile.yml, rules/INDEX.yaml).
 func runUpdate(ctx context.Context) int {
 	if _, err := os.Stat(managedDir); errors.Is(err, fs.ErrNotExist) {
 		slog.ErrorContext(ctx, "not initialized, run 'reins init' first")
@@ -176,9 +176,9 @@ func runUpdate(ctx context.Context) int {
 	slog.InfoContext(ctx, "update complete", "version", version)
 
 	fmt.Println()
-	fmt.Println("Project-owned files were not modified (CLAUDE.md, Taskfile.yml, rules/INDEX.yaml, AUTOPILOT.md).")
+	fmt.Println("Project-owned files were not modified (AGENTS.md, Taskfile.yml, rules/INDEX.yaml, AUTOPILOT.md).")
 	fmt.Println("To check for scaffold changes:")
-	fmt.Println("  diff CLAUDE.md .reins/scaffold/CLAUDE.md")
+	fmt.Println("  diff AGENTS.md .reins/scaffold/AGENTS.md")
 	fmt.Println("  diff rules/INDEX.yaml .reins/scaffold/rules/INDEX.yaml")
 	fmt.Println("  diff AUTOPILOT.md .reins/scaffold/AUTOPILOT.md")
 	fmt.Println()

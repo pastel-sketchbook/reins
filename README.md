@@ -24,7 +24,7 @@ reins init
 # Customize the generated files (see below)
 
 # Commit
-git add .reins CLAUDE.md rules/ Taskfile.yml
+git add .reins AGENTS.md rules/ Taskfile.yml
 git commit -m "chore: init reins framework"
 ```
 
@@ -32,8 +32,8 @@ git commit -m "chore: init reins framework"
 
 | File | Purpose |
 |------|---------|
-| `.reins/` | Managed directory -- AGENTS.md, quality principles, rule-guard agent |
-| `CLAUDE.md` | Bridge file -- tells Claude-based agents to load `.reins/AGENTS.md` |
+| `.reins/` | Managed directory -- METHODOLOGY.md, quality principles, rule-guard agent |
+| `AGENTS.md` | Bridge file -- points AI agents to `.reins/METHODOLOGY.md` |
 | `rules/INDEX.yaml` | Rule trigger mapping -- references `.reins/` principles and your local rules |
 | `Taskfile.yml` | Task automation skeleton -- replace the TODO placeholders with your toolchain |
 | `AUTOPILOT.md` | Autopilot template -- define a goal for autonomous agent sessions |
@@ -43,7 +43,7 @@ It also creates empty `rules/specifics/`, `rules/concerns/`, and
 
 ## What You Get
 
-### Core methodology (`.reins/AGENTS.md`)
+### Core methodology (`.reins/METHODOLOGY.md`)
 
 34 MUST/MUST NOT rules covering:
 
@@ -101,7 +101,7 @@ your-project/
 │   ├── templates/specifics/         # language rule templates
 │   └── VERSION                      # installed reins version
 │
-├── CLAUDE.md                        # bridge file (generated, customizable)
+├── AGENTS.md                        # bridge file (generated, customizable)
 ├── Taskfile.yml                     # your project's task automation
 ├── AUTOPILOT.md                     # autopilot goal/constraints (optional)
 │
@@ -194,10 +194,10 @@ Rule files are Markdown with MUST/MUST NOT items and unique IDs:
 
 | Tool | Entry point | Setup |
 |------|------------|-------|
-| Claude Code | `CLAUDE.md` | Works automatically -- Claude Code reads it at project root |
-| OpenCode | `AGENTS.md` | Symlink: `ln -s .reins/AGENTS.md AGENTS.md` |
-| Cursor | `.cursorrules` | Add: "Read and follow `.reins/AGENTS.md`" |
-| Any Claude agent | System prompt | Paste `.reins/AGENTS.md` contents into the system prompt |
+| OpenCode | `AGENTS.md` | Works automatically -- OpenCode reads it at project root |
+| Claude Code | `CLAUDE.md` | Create: `cp AGENTS.md CLAUDE.md` (Claude Code auto-reads CLAUDE.md) |
+| Cursor | `.cursorrules` | Add: "Read and follow `.reins/METHODOLOGY.md`" |
+| Any AI agent | System prompt | Paste `.reins/METHODOLOGY.md` contents into the system prompt |
 
 ## Updating Reins
 
@@ -210,12 +210,12 @@ reins update
 ```
 
 `reins update` overwrites managed files in `.reins/` but never touches
-project-owned files (`CLAUDE.md`, `Taskfile.yml`, `rules/INDEX.yaml`).
+project-owned files (`AGENTS.md`, `Taskfile.yml`, `rules/INDEX.yaml`).
 
 To check for scaffold changes after an update:
 
 ```bash
-diff CLAUDE.md .reins/scaffold/CLAUDE.md
+diff AGENTS.md .reins/scaffold/AGENTS.md
 diff rules/INDEX.yaml .reins/scaffold/rules/INDEX.yaml
 ```
 

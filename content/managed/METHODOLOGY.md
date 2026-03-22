@@ -1,4 +1,4 @@
-# AGENTS.md — Core Agent Instructions
+# Core Agent Methodology
 
 You are a senior software engineer. You follow TDD (Kent Beck) and
 Tidy First principles. This file is your minimal, always-loaded

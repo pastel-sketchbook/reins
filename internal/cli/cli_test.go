@@ -65,7 +65,7 @@ func TestRunInit_CreatesExpectedFiles(t *testing.T) {
 
 	wantFiles := []string{
 		// Managed files
-		".reins/AGENTS.md",
+		".reins/METHODOLOGY.md",
 		".reins/agents/rule-guard.md",
 		".reins/rules/principles/quality.md",
 		".reins/VERSION",
@@ -77,7 +77,7 @@ func TestRunInit_CreatesExpectedFiles(t *testing.T) {
 		".reins/templates/specifics/rust.md",
 		".reins/templates/specifics/zig.md",
 		// Scaffold files
-		"CLAUDE.md",
+		"AGENTS.md",
 		"Taskfile.yml",
 		"rules/INDEX.yaml",
 		"AUTOPILOT.md",
@@ -152,9 +152,9 @@ func TestRunUpdate_RefreshesManagedFiles(t *testing.T) {
 	}
 
 	// Tamper with a managed file.
-	agentsPath := filepath.Join(".reins", "AGENTS.md")
-	if err := os.WriteFile(agentsPath, []byte("tampered"), 0o644); err != nil {
-		t.Fatalf("failed to tamper with AGENTS.md: %v", err)
+	methodologyPath := filepath.Join(".reins", "METHODOLOGY.md")
+	if err := os.WriteFile(methodologyPath, []byte("tampered"), 0o644); err != nil {
+		t.Fatalf("failed to tamper with METHODOLOGY.md: %v", err)
 	}
 
 	// Simulate a newer version of reins so update proceeds.
@@ -166,12 +166,12 @@ func TestRunUpdate_RefreshesManagedFiles(t *testing.T) {
 		t.Fatalf("runUpdate() = %d, want 0", code)
 	}
 
-	data, err := os.ReadFile(agentsPath)
+	data, err := os.ReadFile(methodologyPath)
 	if err != nil {
-		t.Fatalf("failed to read AGENTS.md after update: %v", err)
+		t.Fatalf("failed to read METHODOLOGY.md after update: %v", err)
 	}
 	if string(data) == "tampered" {
-		t.Error("AGENTS.md was not refreshed by update")
+		t.Error("METHODOLOGY.md was not refreshed by update")
 	}
 }
 
@@ -186,9 +186,9 @@ func TestRunUpdate_DoesNotOverwriteProjectFiles(t *testing.T) {
 	}
 
 	// Tamper with a project-owned file.
-	customContent := []byte("# My custom CLAUDE.md\n")
-	if err := os.WriteFile("CLAUDE.md", customContent, 0o644); err != nil {
-		t.Fatalf("failed to write custom CLAUDE.md: %v", err)
+	customContent := []byte("# My custom AGENTS.md\n")
+	if err := os.WriteFile("AGENTS.md", customContent, 0o644); err != nil {
+		t.Fatalf("failed to write custom AGENTS.md: %v", err)
 	}
 
 	// Simulate a newer version so update proceeds.
@@ -201,12 +201,12 @@ func TestRunUpdate_DoesNotOverwriteProjectFiles(t *testing.T) {
 	}
 
 	// Project file should be untouched.
-	data, err := os.ReadFile("CLAUDE.md")
+	data, err := os.ReadFile("AGENTS.md")
 	if err != nil {
-		t.Fatalf("failed to read CLAUDE.md after update: %v", err)
+		t.Fatalf("failed to read AGENTS.md after update: %v", err)
 	}
 	if string(data) != string(customContent) {
-		t.Errorf("CLAUDE.md was modified by update:\ngot:  %q\nwant: %q", string(data), string(customContent))
+		t.Errorf("AGENTS.md was modified by update:\ngot:  %q\nwant: %q", string(data), string(customContent))
 	}
 }
 

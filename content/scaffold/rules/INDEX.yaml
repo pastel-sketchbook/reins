@@ -1,6 +1,6 @@
 # rules/INDEX.yaml — Trigger mapping for the layered rule system
 #
-# The agent reads this file at the start of every task (AGENTS.md L-01).
+# The agent reads this file at the start of every task (METHODOLOGY.md L-01).
 #
 # Consumption protocol:
 #   1. Load all files under `principles:` unconditionally.
