@@ -13,8 +13,8 @@
 # Conflict resolution: Specifics > Concerns > Principles (most-specific wins).
 #
 # NOTE: This INDEX.yaml is for the reins framework repo itself.
-# Downstream projects get their own INDEX.yaml via `task init`
-# (see templates/INDEX.yaml).
+# Downstream projects get their own INDEX.yaml via `reins init`
+# (see content/scaffold/rules/INDEX.yaml).
 
 # ---------------------------------------------------------------------------
 # Tier 1: Principles — always loaded, no triggers needed.

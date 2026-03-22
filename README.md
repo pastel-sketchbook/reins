@@ -44,7 +44,7 @@ It also creates empty `rules/specifics/`, `rules/concerns/`, and
 
 ### Core methodology (`.reins/AGENTS.md`)
 
-28 MUST/MUST NOT rules covering:
+35 MUST/MUST NOT rules covering:
 
 - **TDD** -- Red, Green, Refactor cycle
 - **Tidy First** -- structural changes separated from behavioral changes

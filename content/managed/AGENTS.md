@@ -76,8 +76,8 @@ For every task, follow this sequence. Do not skip steps.
 
 ## Rule Loading
 
-- **L-01** — MUST open `rules/INDEX.yaml` at the start of every task. If the project uses reins as a submodule, this is the project's local `rules/INDEX.yaml`, not `.reins/rules/INDEX.yaml`.
-- **L-02** — MUST load all files listed under `principles:` unconditionally. Paths may reference the `.reins/` submodule (e.g., `.reins/rules/principles/quality.md`).
+- **L-01** — MUST open `rules/INDEX.yaml` at the start of every task. Use the project's local `rules/INDEX.yaml`, not `.reins/rules/INDEX.yaml`.
+- **L-02** — MUST load all files listed under `principles:` unconditionally. Paths may reference the `.reins/` managed directory (e.g., `.reins/rules/principles/quality.md`).
 - **L-03** — MUST match each file being modified against `trigger:` globs in `concerns:` and `specifics:`. Load matched rule files.
 - **L-04** — For `concerns:` entries with `content_pattern:`, MUST scan the target file content and load only if the pattern matches.
 - **L-05** — MUST read each loaded rule file in full before writing code. Do not rely on memory of previous sessions.
