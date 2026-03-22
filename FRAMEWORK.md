@@ -437,9 +437,9 @@ The binary embeds three categories of content via `go:embed`:
 `rules/principles/quality.md`. These are refreshed to the latest version
 when the user runs `reins update`.
 
-**Scaffold files** are project-owned: `AGENTS.md`, `Taskfile.yml`,
-`rules/INDEX.yaml`, `AUTOPILOT.md`. Created once during `reins init`,
-never touched again. The user customizes these for their project.
+**Scaffold files** are project-owned: `AGENTS.md`, `.editorconfig`,
+`Taskfile.yml`, `rules/INDEX.yaml`, `AUTOPILOT.md`. Created once during
+`reins init`, never touched again. The user customizes these for their project.
 
 **Template files** are language/framework rule templates (e.g.,
 `specifics/go.md`) that the user manually copies into `rules/specifics/`.
@@ -454,6 +454,7 @@ never touched again. The user customizes these for their project.
 | `.reins/templates/` | Language rule templates for manual copying | Reins CLI |
 | `.reins/VERSION` | Installed reins version | Reins CLI |
 | `AGENTS.md` | Bridge file — loads `.reins/METHODOLOGY.md` | Project |
+| `.editorconfig` | Editor settings (indentation, charset, whitespace) | Project |
 | `AUTOPILOT.md` | Autopilot goal, constraints, iteration protocol | Project |
 | `rules/INDEX.yaml` | Trigger mapping for this project | Project |
 | `rules/specifics/` | Language/framework rules | Project |

@@ -77,6 +77,7 @@ func TestRunInit_CreatesExpectedFiles(t *testing.T) {
 		".reins/templates/specifics/rust.md",
 		".reins/templates/specifics/zig.md",
 		// Scaffold files
+		".editorconfig",
 		"AGENTS.md",
 		"Taskfile.yml",
 		"rules/INDEX.yaml",

@@ -33,6 +33,7 @@ git commit -m "chore: init reins framework"
 | File | Purpose |
 |------|---------|
 | `.reins/` | Managed directory -- METHODOLOGY.md, quality principles, rule-guard agent |
+| `.editorconfig` | Editor settings -- consistent indentation, charset, trailing whitespace |
 | `AGENTS.md` | Bridge file -- points AI agents to `.reins/METHODOLOGY.md` |
 | `rules/INDEX.yaml` | Rule trigger mapping -- references `.reins/` principles and your local rules |
 | `Taskfile.yml` | Task automation skeleton -- replace the TODO placeholders with your toolchain |
