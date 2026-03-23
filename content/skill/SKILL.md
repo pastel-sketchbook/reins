@@ -1,12 +1,13 @@
 ---
 name: reins
-version: 0.2.0
+version: 0.4.0
 description: |
   Use the reins CLI to bootstrap and maintain AI-assisted development
-  frameworks in any project. Covers init, update, rule system, autopilot,
-  and verification workflow. Use when initializing reins in a new project,
-  updating managed files, managing language rule templates, or running
-  the reins development workflow (TDD, Tidy First, layered rules).
+  frameworks in any project. Covers init, update, rule system, analysis
+  lenses, autopilot, and verification workflow. Use when initializing
+  reins in a new project, updating managed files, managing language rule
+  templates, generating analysis-lens concerns, or running the reins
+  development workflow (TDD, Tidy First, layered rules).
 allowed-tools:
   - Bash
   - Read
@@ -33,6 +34,7 @@ TDD methodology, layered code rules, and independent verification.
 | `reins init [--lang <name>]` | Bootstrap reins in the current project. With `--lang`, apply a language preset |
 | `reins update` | Refresh managed files in `.reins/` to the latest version |
 | `reins list` | List available language/framework rule templates |
+| `reins lens [--preset <name>] [--lens <alias>...]` | Generate analysis-lens concern templates. No flags lists available lenses |
 | `reins skill` | Install the reins skill for AI tool discovery |
 | `reins version` | Print installed reins version |
 
@@ -76,6 +78,36 @@ file if one was previously installed (global or local).
 
 Lists available language/framework rule templates that can be copied from
 `.reins/templates/specifics/` into `rules/specifics/`.
+
+### `reins lens`
+
+Generates analysis-lens concern templates that instruct the agent to apply
+structured research lenses during codebase review. The generated file lands
+in `rules/concerns/analysis-lenses.md` by default and is loaded via
+`INDEX.yaml` triggers like any other concern.
+
+With no flags, prints available lenses and presets.
+
+#### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--preset <name>` | Select a preset bundle: `quick`, `dd`, `strat`, `all` |
+| `--lens <alias>` | Select an individual lens (repeatable): `synth`, `stake`, `time`, `evidence`, `contra`, `assume`, `weak`, `frame`, `impl`, `quest` |
+| `--output <path>` | Custom output path (default: `rules/concerns/analysis-lenses.md`) |
+
+#### Presets
+
+| Preset | Alias | Lenses |
+|--------|-------|--------|
+| `quick-synthesis` | `quick` | Expert Synthesizer + Implementation Blueprint |
+| `due-diligence` | `dd` | Evidence Mapper, Contradiction Hunter, Assumption Excavator, Weakness Spotter |
+| `strategic-planning` | `strat` | Expert Synthesizer, Framework Builder, Implementation Blueprint, Question Generator |
+| `full-protocol` | `all` | All 10 lenses |
+
+Presets and individual lenses can be combined. Duplicates are merged and
+results are always in canonical order (Synthesizers, Auditors, Architects).
+When 3+ lenses are active, a cross-lens synthesis section is appended.
 
 ---
 

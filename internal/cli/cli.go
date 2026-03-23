@@ -56,6 +56,8 @@ func Run(ctx context.Context, args []string) int {
 		return runUpdate(ctx)
 	case "list":
 		return runList(ctx)
+	case "lens":
+		return runLens(ctx, args[2:])
 	case "skill":
 		return runSkill(ctx)
 	case "version":
@@ -78,6 +80,7 @@ Commands:
   init [--lang <name>]  Bootstrap reins in the current project
   update                Refresh managed files (.reins/) to latest version
   list                  List available language/framework templates
+  lens                  Generate analysis-lens concern templates
   skill                 Install the reins skill for AI tool discovery
   version               Print reins version
 
@@ -86,10 +89,16 @@ Language presets (--lang):
   rust    Rust project (cargo fmt, cargo clippy, cargo test)
   zig     Zig project (zig fmt, zig build, zig build test)
 
+Lens presets (--preset):
+  quick   Expert Synthesizer + Implementation Blueprint
+  dd      Evidence Mapper, Contradiction Hunter, Assumption Excavator, Weakness Spotter
+  strat   Expert Synthesizer, Framework Builder, Implementation Blueprint, Question Generator
+  all     All 10 lenses
+
 Run 'reins init' from your project root to get started.
 Run 'reins init --lang go' for a preconfigured Go project.
-Run 'reins init --lang rust' for a preconfigured Rust project.
-Run 'reins init --lang zig' for a preconfigured Zig project.
+Run 'reins lens --preset dd' for a due-diligence analysis lens concern.
+Run 'reins lens' to see all available lenses and presets.
 `)
 }
 
@@ -537,4 +546,116 @@ func printPresetNextSteps(lang string) {
 	fmt.Println("       git add .reins .editorconfig AGENTS.md rules/ Taskfile.yml AUTOPILOT.md docs/")
 	fmt.Println("       git commit -m 'chore: init reins framework (" + lang + " preset)'")
 	fmt.Println()
+}
+
+// ---------------------------------------------------------------------------
+// Lens subcommand
+// ---------------------------------------------------------------------------
+
+const defaultLensOutput = "rules/concerns/analysis-lenses.md"
+
+// lensArgs holds the parsed flags for `reins lens`.
+type lensArgs struct {
+	preset     *Preset
+	individual []Lens
+	output     string
+}
+
+// runLens implements the `reins lens` subcommand. With no flags it prints
+// available lenses and presets. With --preset and/or --lens flags it
+// generates a concern template file.
+func runLens(ctx context.Context, args []string) int {
+	la, err := parseLensArgs(args)
+	if err != nil {
+		slog.ErrorContext(ctx, err.Error())
+		return 1
+	}
+
+	// No flags → list mode.
+	if la == nil {
+		printLensList()
+		return 0
+	}
+
+	// Require init.
+	if _, statErr := os.Stat(managedDir); errors.Is(statErr, fs.ErrNotExist) {
+		slog.ErrorContext(ctx, "not initialized, run 'reins init' first")
+		return 1
+	}
+
+	lenses := resolveLenses(la.preset, la.individual)
+	if len(lenses) == 0 {
+		slog.ErrorContext(ctx, "no lenses selected")
+		return 1
+	}
+
+	// Build the source attribution string from original args.
+	source := strings.Join(args, " ")
+
+	content := buildConcernFile(lenses, source)
+
+	outPath := la.output
+	if outPath == "" {
+		outPath = defaultLensOutput
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+		slog.ErrorContext(ctx, "failed to create output directory", "path", outPath, "err", err)
+		return 1
+	}
+
+	if err := os.WriteFile(outPath, []byte(content), 0o644); err != nil {
+		slog.ErrorContext(ctx, "failed to write lens file", "path", outPath, "err", err)
+		return 1
+	}
+
+	slog.InfoContext(ctx, "wrote analysis lenses", "path", outPath, "count", len(lenses))
+	return 0
+}
+
+// parseLensArgs parses the args for `reins lens`. Returns nil when no
+// flags are present (list mode). Returns an error for invalid input.
+func parseLensArgs(args []string) (*lensArgs, error) {
+	if len(args) == 0 {
+		return nil, nil
+	}
+
+	var la lensArgs
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--preset":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("--preset requires a value")
+			}
+			i++
+			p := parsePresetAlias(args[i])
+			if p == nil {
+				return nil, fmt.Errorf("unknown preset: %s", args[i])
+			}
+			la.preset = p
+
+		case "--lens":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("--lens requires a value")
+			}
+			i++
+			l := parseLensAlias(args[i])
+			if l == -1 {
+				return nil, fmt.Errorf("unknown lens: %s", args[i])
+			}
+			la.individual = append(la.individual, l)
+
+		case "--output":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("--output requires a value")
+			}
+			i++
+			la.output = args[i]
+
+		default:
+			return nil, fmt.Errorf("unknown flag: %s", args[i])
+		}
+	}
+
+	return &la, nil
 }

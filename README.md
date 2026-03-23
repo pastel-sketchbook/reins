@@ -84,6 +84,51 @@ Adding a new preset requires only a `content/presets/<lang>/` directory and
 an entry in the `presetRuleTemplates` map. Presets for TypeScript and
 Python are planned.
 
+## Analysis Lenses
+
+The `reins lens` subcommand generates analysis-lens concern templates that
+instruct AI agents to apply structured research lenses during codebase
+review. The generated file is placed in `rules/concerns/analysis-lenses.md`
+and loaded by agents via `INDEX.yaml` triggers.
+
+```bash
+# List available lenses and presets
+reins lens
+
+# Generate a due-diligence concern (4 auditor lenses)
+reins lens --preset dd
+
+# Cherry-pick individual lenses
+reins lens --lens synth --lens weak
+
+# Merge a preset with additional lenses
+reins lens --preset dd --lens synth
+
+# Custom output path
+reins lens --preset all --output docs/analysis-lenses.md
+```
+
+The 10 lenses are organized into three categories:
+
+| Category | Lenses |
+|----------|--------|
+| **Synthesizers** | Expert Synthesizer, Stakeholder Translator, Timeline Constructor |
+| **Auditors** | Evidence Mapper, Contradiction Hunter, Assumption Excavator, Weakness Spotter |
+| **Architects** | Framework Builder, Implementation Blueprint, Question Generator |
+
+Four presets bundle common combinations:
+
+| Preset | Alias | Lenses |
+|--------|-------|--------|
+| `quick-synthesis` | `quick` | Expert Synthesizer + Implementation Blueprint |
+| `due-diligence` | `dd` | Evidence Mapper, Contradiction Hunter, Assumption Excavator, Weakness Spotter |
+| `strategic-planning` | `strat` | Expert Synthesizer, Framework Builder, Implementation Blueprint, Question Generator |
+| `full-protocol` | `all` | All 10 lenses |
+
+When 3 or more lenses are active, a cross-lens synthesis section is
+appended that instructs the agent to identify themes, gaps, and
+recommended actions across all analyses.
+
 ## What You Get
 
 ### Core methodology (`.reins/METHODOLOGY.md`)
@@ -285,6 +330,7 @@ diff rules/INDEX.yaml .reins/scaffold/rules/INDEX.yaml
 | `reins init [--lang <name>]` | Bootstrap reins in the current project. With `--lang`, apply a language preset (available: `go`, `rust`, `zig`) |
 | `reins update` | Refresh managed files to the latest version |
 | `reins list` | List available language/framework templates |
+| `reins lens [--preset <name>] [--lens <alias>...] [--output <path>]` | Generate analysis-lens concern templates. No flags prints available lenses |
 | `reins version` | Print installed reins version |
 
 ## License

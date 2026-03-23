@@ -1075,3 +1075,199 @@ func TestRunInit_ZigPresetViaRunDispatcher(t *testing.T) {
 		t.Error("Taskfile.yml should be the Zig preset, not the generic skeleton")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Lens subcommand tests (reins lens)
+// ---------------------------------------------------------------------------
+
+// captureStdout runs fn and returns whatever it wrote to os.Stdout.
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("creating pipe: %v", err)
+	}
+
+	old := os.Stdout
+	os.Stdout = w
+
+	fn()
+
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, r); err != nil {
+		t.Fatalf("reading pipe: %v", err)
+	}
+	return buf.String()
+}
+
+func TestRunLens_NoArgs_PrintsList(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	got := captureStdout(t, func() {
+		code := Run(ctx, []string{"reins", "lens"})
+		if code != 0 {
+			t.Errorf("Run lens (no args) = %d, want 0", code)
+		}
+	})
+
+	// Should print the lens listing, not write a file.
+	if !strings.Contains(got, "Available analysis lenses") {
+		t.Errorf("expected lens listing in stdout, got:\n%s", got)
+	}
+	if !strings.Contains(got, "Presets:") {
+		t.Errorf("expected preset listing in stdout, got:\n%s", got)
+	}
+}
+
+func TestRunLens_RequiresInit(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	// No .reins/ directory — should fail.
+	logBuf := newTestLogger(t)
+	code := Run(ctx, []string{"reins", "lens", "--preset", "quick"})
+	if code != 1 {
+		t.Errorf("Run lens without init = %d, want 1", code)
+	}
+	if !strings.Contains(logBuf.String(), "not initialized") {
+		t.Errorf("expected 'not initialized' in log, got:\n%s", logBuf.String())
+	}
+}
+
+func TestRunLens_WritesFile(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	// Init first so .reins/ exists and rules/concerns/ is created.
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	suppressOutput(t, func() {
+		code := Run(ctx, []string{"reins", "lens", "--preset", "dd"})
+		if code != 0 {
+			t.Fatalf("Run lens --preset dd = %d, want 0", code)
+		}
+	})
+
+	data, err := os.ReadFile("rules/concerns/analysis-lenses.md")
+	if err != nil {
+		t.Fatalf("expected analysis-lenses.md to exist: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "# Analysis Lenses") {
+		t.Error("missing header in generated file")
+	}
+	if !strings.Contains(content, "C-LENS-04") {
+		t.Error("missing Evidence Mapper rule ID (C-LENS-04)")
+	}
+	if !strings.Contains(content, "C-LENS-07") {
+		t.Error("missing Weakness Spotter rule ID (C-LENS-07)")
+	}
+}
+
+func TestRunLens_CustomOutput(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	customPath := "my/custom/lenses.md"
+	suppressOutput(t, func() {
+		code := Run(ctx, []string{"reins", "lens", "--preset", "quick", "--output", customPath})
+		if code != 0 {
+			t.Fatalf("Run lens --output custom = %d, want 0", code)
+		}
+	})
+
+	data, err := os.ReadFile(customPath)
+	if err != nil {
+		t.Fatalf("expected %s to exist: %v", customPath, err)
+	}
+	if !strings.Contains(string(data), "# Analysis Lenses") {
+		t.Error("custom output file missing header")
+	}
+}
+
+func TestRunLens_IndividualLenses(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	suppressOutput(t, func() {
+		code := Run(ctx, []string{"reins", "lens", "--lens", "synth", "--lens", "weak"})
+		if code != 0 {
+			t.Fatalf("Run lens --lens synth --lens weak = %d, want 0", code)
+		}
+	})
+
+	data, err := os.ReadFile("rules/concerns/analysis-lenses.md")
+	if err != nil {
+		t.Fatalf("expected analysis-lenses.md: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "C-LENS-01") {
+		t.Error("missing Expert Synthesizer (C-LENS-01)")
+	}
+	if !strings.Contains(content, "C-LENS-07") {
+		t.Error("missing Weakness Spotter (C-LENS-07)")
+	}
+}
+
+func TestRunLens_InvalidPreset(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	logBuf := newTestLogger(t)
+	code := Run(ctx, []string{"reins", "lens", "--preset", "bogus"})
+	if code != 1 {
+		t.Errorf("Run lens --preset bogus = %d, want 1", code)
+	}
+	if !strings.Contains(logBuf.String(), "unknown preset") {
+		t.Errorf("expected 'unknown preset' in log, got:\n%s", logBuf.String())
+	}
+}
+
+func TestRunLens_InvalidLens(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	logBuf := newTestLogger(t)
+	code := Run(ctx, []string{"reins", "lens", "--lens", "bogus"})
+	if code != 1 {
+		t.Errorf("Run lens --lens bogus = %d, want 1", code)
+	}
+	if !strings.Contains(logBuf.String(), "unknown lens") {
+		t.Errorf("expected 'unknown lens' in log, got:\n%s", logBuf.String())
+	}
+}

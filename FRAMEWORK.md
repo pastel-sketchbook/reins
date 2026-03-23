@@ -615,6 +615,7 @@ diff AUTOPILOT.md .reins/scaffold/AUTOPILOT.md
 | `reins update` | Refresh managed files to latest version |
 | `reins skill` | Install the reins AI tool skill (global or local) |
 | `reins list` | List available language/framework templates |
+| `reins lens [--preset <name>] [--lens <alias>...] [--output <path>]` | Generate analysis-lens concern templates. No flags lists available lenses |
 | `reins version` | Print installed reins version |
 
 ---
