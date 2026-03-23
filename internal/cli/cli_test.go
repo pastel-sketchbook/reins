@@ -1252,6 +1252,99 @@ func TestRunLens_InvalidPreset(t *testing.T) {
 	}
 }
 
+func TestRunLens_RegistersInIndexYaml(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	suppressOutput(t, func() {
+		code := Run(ctx, []string{"reins", "lens", "--preset", "dd"})
+		if code != 0 {
+			t.Fatalf("Run lens --preset dd = %d, want 0", code)
+		}
+	})
+
+	data, err := os.ReadFile("rules/INDEX.yaml")
+	if err != nil {
+		t.Fatalf("failed to read INDEX.yaml: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "rules/concerns/analysis-lenses.md") {
+		t.Errorf("INDEX.yaml should contain lens file path after reins lens, got:\n%s", content)
+	}
+}
+
+func TestRunLens_SkipsDuplicateRegistration(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	// Run lens twice.
+	for range 2 {
+		suppressOutput(t, func() {
+			code := Run(ctx, []string{"reins", "lens", "--preset", "dd"})
+			if code != 0 {
+				t.Fatalf("Run lens --preset dd = %d, want 0", code)
+			}
+		})
+	}
+
+	data, err := os.ReadFile("rules/INDEX.yaml")
+	if err != nil {
+		t.Fatalf("failed to read INDEX.yaml: %v", err)
+	}
+
+	content := string(data)
+	count := strings.Count(content, "rules/concerns/analysis-lenses.md")
+	if count != 1 {
+		t.Errorf("INDEX.yaml has %d occurrences of lens path, want exactly 1:\n%s", count, content)
+	}
+}
+
+func TestRunLens_CustomOutput_RegistersCustomPath(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	customPath := "my/custom/lenses.md"
+	suppressOutput(t, func() {
+		code := Run(ctx, []string{"reins", "lens", "--preset", "quick", "--output", customPath})
+		if code != 0 {
+			t.Fatalf("Run lens --output custom = %d, want 0", code)
+		}
+	})
+
+	data, err := os.ReadFile("rules/INDEX.yaml")
+	if err != nil {
+		t.Fatalf("failed to read INDEX.yaml: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, customPath) {
+		t.Errorf("INDEX.yaml should contain custom path %q, got:\n%s", customPath, content)
+	}
+	// Default path should NOT be registered.
+	if strings.Contains(content, defaultLensOutput) {
+		t.Errorf("INDEX.yaml should not contain default path when custom output was used:\n%s", content)
+	}
+}
+
 func TestRunLens_InvalidLens(t *testing.T) {
 	t.Chdir(t.TempDir())
 	ctx := context.Background()

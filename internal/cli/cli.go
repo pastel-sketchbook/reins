@@ -610,7 +610,70 @@ func runLens(ctx context.Context, args []string) int {
 	}
 
 	slog.InfoContext(ctx, "wrote analysis lenses", "path", outPath, "count", len(lenses))
+
+	// Auto-register in INDEX.yaml so the agent always loads the lens file.
+	if err := registerInIndex(ctx, outPath); err != nil {
+		slog.WarnContext(ctx, "could not register in INDEX.yaml", "err", err)
+	}
+
 	return 0
+}
+
+// registerInIndex appends path to the principles: list in rules/INDEX.yaml
+// if it is not already present. This is a string-level operation — no YAML
+// parser is used, respecting the stdlib-only constraint.
+func registerInIndex(ctx context.Context, path string) error {
+	const indexPath = "rules/INDEX.yaml"
+
+	data, err := os.ReadFile(indexPath)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", indexPath, err)
+	}
+
+	content := string(data)
+
+	// Already registered?
+	entry := "  - " + path
+	for line := range strings.SplitSeq(content, "\n") {
+		if strings.TrimSpace(line) == "- "+path {
+			slog.InfoContext(ctx, "already registered in INDEX.yaml", "path", path)
+			return nil
+		}
+	}
+
+	// Find the principles: line and insert after the last existing entry.
+	lines := strings.Split(content, "\n")
+	principlesIdx := -1
+	insertIdx := -1
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "principles:" {
+			principlesIdx = i
+			insertIdx = i + 1
+			continue
+		}
+		// Track the last "  - ..." entry that belongs to principles.
+		if principlesIdx >= 0 && strings.HasPrefix(line, "  - ") {
+			insertIdx = i + 1
+			continue
+		}
+		// Stop when we hit a non-entry, non-blank, non-comment line after principles.
+		if principlesIdx >= 0 && trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+			break
+		}
+	}
+
+	if principlesIdx == -1 {
+		return fmt.Errorf("no principles: section found in %s", indexPath)
+	}
+
+	// Insert the new entry.
+	updated := make([]string, 0, len(lines)+1)
+	updated = append(updated, lines[:insertIdx]...)
+	updated = append(updated, entry)
+	updated = append(updated, lines[insertIdx:]...)
+
+	return os.WriteFile(indexPath, []byte(strings.Join(updated, "\n")), 0o644)
 }
 
 // parseLensArgs parses the args for `reins lens`. Returns nil when no
