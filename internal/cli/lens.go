@@ -9,28 +9,33 @@ import (
 // Lens identifies one of the 10 research-analysis lenses.
 type Lens int
 
+// Lens constants identify the 10 research-analysis lenses, organized as:
+// Synthesizers (Expert, Stakeholder, Timeline), Auditors (Evidence,
+// Contradiction, Assumption, Weakness), and Architects (Framework,
+// Implementation, Question).
 const (
-	ExpertSynthesizer Lens = iota
-	StakeholderTranslator
-	TimelineConstructor
-	EvidenceMapper
-	ContradictionHunter
-	AssumptionExcavator
-	WeaknessSpotter
-	FrameworkBuilder
-	ImplementationBlueprint
-	QuestionGenerator
-	lensCount // sentinel — must be last
+	ExpertSynthesizer       Lens = iota // Synthesizers: core insights
+	StakeholderTranslator               // Synthesizers: audience translation
+	TimelineConstructor                 // Synthesizers: temporal signals
+	EvidenceMapper                      // Auditors: evidence quality
+	ContradictionHunter                 // Auditors: internal contradictions
+	AssumptionExcavator                 // Auditors: hidden assumptions
+	WeaknessSpotter                     // Auditors: methodological flaws
+	FrameworkBuilder                    // Architects: conceptual framework
+	ImplementationBlueprint             // Architects: step-by-step plan
+	QuestionGenerator                   // Architects: unanswered questions
+	lensCount                           // sentinel — must be last
 )
 
 // Preset is a curated bundle of lenses.
 type Preset int
 
+// Preset constants identify curated lens bundles for common workflows.
 const (
-	PresetQuickSynthesis Preset = iota
-	PresetDueDiligence
-	PresetStrategicPlanning
-	PresetFullProtocol
+	PresetQuickSynthesis    Preset = iota // Expert Synthesizer + Implementation Blueprint
+	PresetDueDiligence                    // All 4 Auditor lenses
+	PresetStrategicPlanning               // Synthesizer + Architects mix
+	PresetFullProtocol                    // All 10 lenses
 )
 
 // allLenses returns every lens in canonical order.

@@ -255,7 +255,7 @@ func runList(ctx context.Context) int {
 
 	err := fs.WalkDir(content.FS, "templates/specifics", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("walking templates: %w", err)
 		}
 
 		if d.IsDir() || !strings.HasSuffix(path, ".md") {
@@ -404,7 +404,7 @@ func localSkillPath() string {
 func copyEmbeddedDir(ctx context.Context, srcRoot, dstRoot string, overwrite bool) error {
 	return fs.WalkDir(content.FS, srcRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("walking %s: %w", srcRoot, err)
 		}
 
 		rel, err := filepath.Rel(srcRoot, path)

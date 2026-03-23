@@ -1088,6 +1088,7 @@ func captureStdout(t *testing.T, fn func()) string {
 	if err != nil {
 		t.Fatalf("creating pipe: %v", err)
 	}
+	defer r.Close()
 
 	old := os.Stdout
 	os.Stdout = w
