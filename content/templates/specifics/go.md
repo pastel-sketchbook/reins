@@ -79,6 +79,28 @@ of these.
   or top-level initialization where no context exists. This ensures trace IDs
   and other context-carried metadata flow into every log record.
 
+## CLI (Cobra)
+
+- **S-GO-40** — MUST use `cobra` for CLI command structure. Define each
+  command as a separate `*cobra.Command` variable or function. Register
+  subcommands via `AddCommand` in an `init()` or explicit wiring function.
+- **S-GO-41** — MUST use `cobra` flag binding (`cmd.Flags()`,
+  `cmd.PersistentFlags()`) for all CLI options. Do not use `flag` package
+  or manual `os.Args` parsing alongside Cobra.
+- **S-GO-42** — MUST set `Use`, `Short`, and `Long` fields on every
+  `cobra.Command`. The `Use` field MUST follow the pattern
+  `"verb [flags] [args]"`. Include `Example` when the command has
+  non-obvious usage.
+- **S-GO-43** — MUST wire persistent flags (e.g., `--verbose`, `--output`)
+  on the root command. Use `PersistentPreRunE` for shared setup
+  (logger initialization, config loading) that all subcommands inherit.
+- **S-GO-44** — MUST use `RunE` (not `Run`) for command execution to
+  propagate errors up the call chain. Handle the error in `main()` and
+  exit with a non-zero code.
+- **S-GO-45** — MUST place each subcommand in its own file under `cmd/`
+  (e.g., `cmd/serve.go`, `cmd/migrate.go`). Keep `cmd/root.go` minimal --
+  only root command definition, persistent flags, and `PersistentPreRunE`.
+
 ## Verification
 
 - **S-GO-10** — MUST run `task check:all` (format, fix, lint, unit tests) before every commit.

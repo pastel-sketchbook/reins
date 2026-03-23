@@ -5,7 +5,8 @@ your core methodology — TDD, Tidy First, commit rules, and quality standards.
 
 ## Tech Stack
 
-- Language: Go (see `go.mod` for version)
+- Language: Go 1.26+ (see `go.mod` for version)
+- CLI framework: `cobra` (command structure, flags, help generation)
 - Structured logging: `log/slog` (stdlib only)
 - Context: `context.Context` threaded explicitly through all functions
 - Build system: [Task](https://taskfile.dev) (see `Taskfile.yml`)
