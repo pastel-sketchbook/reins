@@ -51,7 +51,7 @@ func Run(ctx context.Context, args []string) int {
 
 	switch args[1] {
 	case "init":
-		return runInit(ctx)
+		return runInit(ctx, args[2:])
 	case "update":
 		return runUpdate(ctx)
 	case "list":
@@ -75,20 +75,35 @@ func printUsage() {
 	fmt.Print(`Usage: reins <command>
 
 Commands:
-  init      Bootstrap reins in the current project
-  update    Refresh managed files (.reins/) to latest version
-  list      List available language/framework templates
-  skill     Install the reins skill for AI tool discovery
-  version   Print reins version
+  init [--lang <name>]  Bootstrap reins in the current project
+  update                Refresh managed files (.reins/) to latest version
+  list                  List available language/framework templates
+  skill                 Install the reins skill for AI tool discovery
+  version               Print reins version
+
+Language presets (--lang):
+  go      Go project (gofmt, go vet, staticcheck, go test)
 
 Run 'reins init' from your project root to get started.
+Run 'reins init --lang go' for a preconfigured Go project.
 `)
 }
 
 // runInit creates .reins/ with managed files and copies templates to the
 // project root. Templates are never overwritten; managed files are only
-// written if .reins/ doesn't exist yet.
-func runInit(ctx context.Context) int {
+// written if .reins/ doesn't exist yet. When args contains --lang <name>,
+// a language preset is applied after the generic scaffold.
+func runInit(ctx context.Context, args []string) int {
+	lang := parseLangFlag(args)
+
+	// Validate the preset exists before doing any work.
+	if lang != "" {
+		if err := validatePreset(lang); err != nil {
+			slog.ErrorContext(ctx, "unknown language preset", "lang", lang, "err", err)
+			return 1
+		}
+	}
+
 	if _, err := os.Stat(managedDir); err == nil {
 		slog.ErrorContext(ctx, "already initialized, use 'reins update' to refresh", "path", managedDir+"/")
 		return 1
@@ -133,7 +148,14 @@ func runInit(ctx context.Context) int {
 		}
 	}
 
-	// 6. Prompt for skill installation.
+	// 6. Apply language preset if specified.
+	if lang != "" {
+		if code := applyPreset(ctx, lang); code != 0 {
+			return code
+		}
+	}
+
+	// 7. Prompt for skill installation.
 	choice := promptSkillLocation()
 	switch choice {
 	case "g":
@@ -147,18 +169,11 @@ func runInit(ctx context.Context) int {
 	}
 
 	fmt.Println()
-	fmt.Println("Done. Next steps:")
-	fmt.Println()
-	fmt.Println("  1. Edit Taskfile.yml — replace TODO placeholders with your toolchain commands.")
-	fmt.Println("  2. Edit rules/INDEX.yaml — uncomment or add specifics for your language.")
-	fmt.Println("  3. Copy a language template if needed:")
-	fmt.Println("       reins list              # see available templates")
-	fmt.Println("       cp .reins/templates/specifics/go.md rules/specifics/go.md")
-	fmt.Println("  4. (Optional) Edit AUTOPILOT.md — define a goal for autonomous agent sessions.")
-	fmt.Println("  5. Commit:")
-	fmt.Println("       git add .reins .editorconfig AGENTS.md rules/ Taskfile.yml AUTOPILOT.md")
-	fmt.Println("       git commit -m 'chore: init reins framework'")
-	fmt.Println()
+	if lang != "" {
+		printPresetNextSteps(lang)
+	} else {
+		printGenericNextSteps()
+	}
 
 	return 0
 }
@@ -416,4 +431,104 @@ func copyEmbeddedDir(ctx context.Context, srcRoot, dstRoot string, overwrite boo
 		}
 		return nil
 	})
+}
+
+// parseLangFlag extracts the --lang value from args. Returns "" if not present.
+func parseLangFlag(args []string) string {
+	for i, arg := range args {
+		if arg == "--lang" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return ""
+}
+
+// validatePreset checks that a language preset directory exists in the embedded FS.
+func validatePreset(lang string) error {
+	presetDir := filepath.Join("presets", lang)
+	_, err := fs.Stat(content.FS, presetDir)
+	if err != nil {
+		return fmt.Errorf("preset %q not found: %w", lang, err)
+	}
+	return nil
+}
+
+// presetRuleTemplates maps language presets to the rule template files that
+// should be auto-copied into rules/specifics/. Each entry is a filename
+// relative to templates/specifics/ in the embedded FS.
+var presetRuleTemplates = map[string][]string{
+	"go": {"go.md"},
+}
+
+// applyPreset overwrites generic scaffold files with language-specific
+// preset versions, copies rule templates, and creates preset directories.
+func applyPreset(ctx context.Context, lang string) int {
+	presetDir := filepath.Join("presets", lang)
+	slog.InfoContext(ctx, "applying language preset", "lang", lang)
+
+	// Overwrite scaffold files with preset versions.
+	if err := copyEmbeddedDir(ctx, presetDir, ".", true); err != nil {
+		slog.ErrorContext(ctx, "failed to apply preset", "lang", lang, "err", err)
+		return 1
+	}
+
+	// Copy rule templates to active rules directory.
+	for _, tmpl := range presetRuleTemplates[lang] {
+		src := filepath.Join("templates", "specifics", tmpl)
+		dst := filepath.Join("rules", "specifics", tmpl)
+
+		data, err := fs.ReadFile(content.FS, src)
+		if err != nil {
+			slog.ErrorContext(ctx, "failed to read rule template", "template", src, "err", err)
+			return 1
+		}
+
+		slog.InfoContext(ctx, "create", "path", dst)
+		if err := os.WriteFile(dst, data, 0o644); err != nil {
+			slog.ErrorContext(ctx, "failed to write rule file", "path", dst, "err", err)
+			return 1
+		}
+	}
+
+	// Create ADR directory.
+	adrDir := filepath.Join("docs", "rationale")
+	if err := os.MkdirAll(adrDir, 0o755); err != nil {
+		slog.ErrorContext(ctx, "failed to create ADR directory", "path", adrDir, "err", err)
+		return 1
+	}
+
+	return 0
+}
+
+// printGenericNextSteps prints post-init instructions for generic (no-lang) init.
+func printGenericNextSteps() {
+	fmt.Println("Done. Next steps:")
+	fmt.Println()
+	fmt.Println("  1. Edit Taskfile.yml — replace TODO placeholders with your toolchain commands.")
+	fmt.Println("  2. Edit rules/INDEX.yaml — uncomment or add specifics for your language.")
+	fmt.Println("  3. Copy a language template if needed:")
+	fmt.Println("       reins list              # see available templates")
+	fmt.Println("       cp .reins/templates/specifics/go.md rules/specifics/go.md")
+	fmt.Println("  4. (Optional) Edit AUTOPILOT.md — define a goal for autonomous agent sessions.")
+	fmt.Println("  5. Commit:")
+	fmt.Println("       git add .reins .editorconfig AGENTS.md rules/ Taskfile.yml AUTOPILOT.md")
+	fmt.Println("       git commit -m 'chore: init reins framework'")
+	fmt.Println()
+}
+
+// printPresetNextSteps prints post-init instructions when a language preset was applied.
+func printPresetNextSteps(lang string) {
+	fmt.Println("Done. Language preset applied: " + lang)
+	fmt.Println()
+	fmt.Println("  Taskfile.yml, AGENTS.md, and rules/ have been preconfigured.")
+	fmt.Println()
+	fmt.Println("  Next steps:")
+	fmt.Println()
+	fmt.Println("  1. Review Taskfile.yml — adjust tasks for your project's toolchain.")
+	fmt.Println("  2. Review rules/INDEX.yaml — uncomment additional triggers as needed.")
+	fmt.Println("  3. (Optional) Edit AUTOPILOT.md — define a goal for autonomous agent sessions.")
+	fmt.Println("  4. Commit:")
+	fmt.Println("       git add .reins .editorconfig AGENTS.md rules/ Taskfile.yml AUTOPILOT.md docs/")
+	fmt.Println("       git commit -m 'chore: init reins framework (" + lang + " preset)'")
+	fmt.Println()
 }

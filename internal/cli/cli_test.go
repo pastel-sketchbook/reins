@@ -67,7 +67,7 @@ func TestRunInit_CreatesExpectedFiles(t *testing.T) {
 	t.Chdir(t.TempDir())
 	ctx := context.Background()
 
-	code := runInit(ctx)
+	code := runInit(ctx, nil)
 	if code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
@@ -121,11 +121,11 @@ func TestRunInit_RejectsDoubleInit(t *testing.T) {
 	t.Chdir(t.TempDir())
 	ctx := context.Background()
 
-	if code := runInit(ctx); code != 0 {
+	if code := runInit(ctx, nil); code != 0 {
 		t.Fatalf("first runInit() = %d, want 0", code)
 	}
 
-	code := runInit(ctx)
+	code := runInit(ctx, nil)
 	if code != 1 {
 		t.Errorf("second runInit() = %d, want 1", code)
 	}
@@ -138,7 +138,7 @@ func TestRunInit_WritesVersion(t *testing.T) {
 	SetVersion("1.2.3")
 	t.Cleanup(func() { SetVersion("dev") })
 
-	if code := runInit(ctx); code != 0 {
+	if code := runInit(ctx, nil); code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
 
@@ -157,7 +157,7 @@ func TestRunUpdate_RefreshesManagedFiles(t *testing.T) {
 
 	SetVersion("1.0.0")
 
-	if code := runInit(ctx); code != 0 {
+	if code := runInit(ctx, nil); code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
 
@@ -191,7 +191,7 @@ func TestRunUpdate_DoesNotOverwriteProjectFiles(t *testing.T) {
 
 	SetVersion("1.0.0")
 
-	if code := runInit(ctx); code != 0 {
+	if code := runInit(ctx, nil); code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
 
@@ -283,7 +283,7 @@ func TestRunUpdate_SkipsWhenAlreadyCurrent(t *testing.T) {
 	t.Cleanup(func() { SetVersion("dev") })
 
 	suppressOutput(t, func() {
-		if code := runInit(ctx); code != 0 {
+		if code := runInit(ctx, nil); code != 0 {
 			t.Fatalf("runInit() = %d, want 0", code)
 		}
 	})
@@ -315,7 +315,7 @@ func TestRunUpdate_ProceedsWhenVersionDiffers(t *testing.T) {
 
 	SetVersion("1.0.0")
 
-	if code := runInit(ctx); code != 0 {
+	if code := runInit(ctx, nil); code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
 
@@ -344,7 +344,7 @@ func TestRunInit_WarnsWithoutGitDir(t *testing.T) {
 
 	// No .git directory — init should still succeed (return 0) but warn.
 	logBuf := newTestLogger(t)
-	code := runInit(ctx)
+	code := runInit(ctx, nil)
 	if code != 0 {
 		t.Errorf("runInit() without .git = %d, want 0 (with warning)", code)
 	}
@@ -368,7 +368,7 @@ func TestRunInit_NoWarningWithGitDir(t *testing.T) {
 	// Skip skill prompt during init.
 	setStdin(t, "n\n")
 
-	code := runInit(ctx)
+	code := runInit(ctx, nil)
 	if code != 0 {
 		t.Errorf("runInit() with .git = %d, want 0", code)
 	}
@@ -491,7 +491,7 @@ func TestRunInit_InstallsSkillWhenChosen(t *testing.T) {
 	// Choose local skill installation.
 	setStdin(t, "l\n")
 
-	code := runInit(ctx)
+	code := runInit(ctx, nil)
 	if code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
@@ -508,7 +508,7 @@ func TestRunInit_SkipsSkillWhenDeclined(t *testing.T) {
 
 	setStdin(t, "n\n")
 
-	code := runInit(ctx)
+	code := runInit(ctx, nil)
 	if code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
@@ -529,7 +529,7 @@ func TestRunUpdate_RefreshesGlobalSkill(t *testing.T) {
 
 	// Init with skip-skill to avoid prompt, then manually place a global skill.
 	setStdin(t, "n\n")
-	if code := runInit(ctx); code != 0 {
+	if code := runInit(ctx, nil); code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
 
@@ -565,7 +565,7 @@ func TestRunUpdate_RefreshesLocalSkill(t *testing.T) {
 	SetVersion("1.0.0")
 
 	setStdin(t, "n\n")
-	if code := runInit(ctx); code != 0 {
+	if code := runInit(ctx, nil); code != 0 {
 		t.Fatalf("runInit() = %d, want 0", code)
 	}
 
@@ -609,5 +609,187 @@ func TestRun_SkillCommand(t *testing.T) {
 	skillPath := filepath.Join(".agents", "skills", "reins", "SKILL.md")
 	if _, err := os.Stat(skillPath); err != nil {
 		t.Errorf("expected skill at %s: %v", skillPath, err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Language preset tests (--lang)
+// ---------------------------------------------------------------------------
+
+func TestRunInit_GoPresetCreatesGoTaskfile(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "go"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang go) = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("Taskfile.yml")
+	if err != nil {
+		t.Fatalf("failed to read Taskfile.yml: %v", err)
+	}
+
+	content := string(data)
+
+	// Go preset Taskfile must NOT contain placeholder exit-1 errors.
+	if strings.Contains(content, "exit 1") {
+		t.Error("Go preset Taskfile.yml still contains placeholder 'exit 1'")
+	}
+
+	// Must contain real Go commands.
+	for _, want := range []string{"gofmt", "go vet", "go test", "go fix"} {
+		if !strings.Contains(content, want) {
+			t.Errorf("Go preset Taskfile.yml missing %q", want)
+		}
+	}
+}
+
+func TestRunInit_GoPresetCreatesGoIndexYaml(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "go"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang go) = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("rules/INDEX.yaml")
+	if err != nil {
+		t.Fatalf("failed to read INDEX.yaml: %v", err)
+	}
+
+	content := string(data)
+
+	// Go preset INDEX.yaml must have an uncommented Go trigger.
+	if !strings.Contains(content, "trigger: \"**/*.go\"") {
+		t.Error("Go preset INDEX.yaml missing uncommented Go trigger")
+	}
+	if !strings.Contains(content, "rules/specifics/go.md") {
+		t.Error("Go preset INDEX.yaml missing go.md rule reference")
+	}
+}
+
+func TestRunInit_GoPresetCopiesGoRules(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "go"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang go) = %d, want 0", code)
+	}
+
+	// Go rules should be auto-copied from templates.
+	data, err := os.ReadFile("rules/specifics/go.md")
+	if err != nil {
+		t.Fatalf("expected rules/specifics/go.md to exist: %v", err)
+	}
+
+	if !strings.Contains(string(data), "S-GO-01") {
+		t.Error("rules/specifics/go.md missing expected Go rule content")
+	}
+}
+
+func TestRunInit_GoPresetCreatesADRDirectory(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "go"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang go) = %d, want 0", code)
+	}
+
+	info, err := os.Stat("docs/rationale")
+	if err != nil {
+		t.Fatalf("expected docs/rationale/ to exist: %v", err)
+	}
+	if !info.IsDir() {
+		t.Error("docs/rationale should be a directory")
+	}
+}
+
+func TestRunInit_GoPresetAgentsMdHasTechStack(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "go"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang go) = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("AGENTS.md")
+	if err != nil {
+		t.Fatalf("failed to read AGENTS.md: %v", err)
+	}
+
+	content := string(data)
+
+	if !strings.Contains(content, "Tech Stack") {
+		t.Error("Go preset AGENTS.md missing 'Tech Stack' section")
+	}
+	if !strings.Contains(content, "Architecture Decision Records") {
+		t.Error("Go preset AGENTS.md missing 'Architecture Decision Records' section")
+	}
+}
+
+func TestRunInit_InvalidLangFails(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	logBuf := newTestLogger(t)
+	code := runInit(ctx, []string{"--lang", "cobol"})
+	if code != 1 {
+		t.Errorf("runInit(--lang cobol) = %d, want 1", code)
+	}
+
+	if !strings.Contains(logBuf.String(), "unknown language preset") {
+		t.Errorf("expected 'unknown language preset' in log, got:\n%s", logBuf.String())
+	}
+}
+
+func TestRunInit_NoLangStillWorks(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, nil)
+	if code != 0 {
+		t.Fatalf("runInit(no lang) = %d, want 0", code)
+	}
+
+	// Should have the generic skeleton Taskfile (with exit 1).
+	data, err := os.ReadFile("Taskfile.yml")
+	if err != nil {
+		t.Fatalf("failed to read Taskfile.yml: %v", err)
+	}
+	if !strings.Contains(string(data), "exit 1") {
+		t.Error("generic init should have placeholder 'exit 1' in Taskfile.yml")
+	}
+
+	// Should NOT have docs/rationale (that's preset-only).
+	if _, err := os.Stat("docs/rationale"); err == nil {
+		t.Error("generic init should not create docs/rationale/")
+	}
+
+	// Should NOT have rules/specifics/go.md auto-copied.
+	if _, err := os.Stat("rules/specifics/go.md"); err == nil {
+		t.Error("generic init should not auto-copy rules/specifics/go.md")
+	}
+}
+
+func TestRunInit_LangViaRunDispatcher(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := Run(ctx, []string{"reins", "init", "--lang", "go"})
+	if code != 0 {
+		t.Errorf("Run init --lang go = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("Taskfile.yml")
+	if err != nil {
+		t.Fatalf("failed to read Taskfile.yml: %v", err)
+	}
+	if strings.Contains(string(data), "exit 1") {
+		t.Error("Taskfile.yml should be the Go preset, not the generic skeleton")
 	}
 }

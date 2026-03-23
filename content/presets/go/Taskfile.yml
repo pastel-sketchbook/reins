@@ -1,0 +1,55 @@
+version: "3"
+
+# ---------------------------------------------------------------------------
+# Go project task automation — preconfigured by `reins init --lang go`.
+#
+# The `check:all` task is mandatory. AGENTS.md rule V-01 requires the agent
+# to run it before every commit.
+# ---------------------------------------------------------------------------
+
+tasks:
+  check:all:
+    desc: "Run all quality gates"
+    deps: [format, fix, lint, vet, test:unit]
+    cmds:
+      - echo "All checks passed!"
+
+  format:
+    desc: "Format Go source files"
+    cmds:
+      - gofmt -w .
+
+  fix:
+    desc: "Run Go modernizer (go fix)"
+    cmds:
+      - go fix ./...
+
+  lint:
+    desc: "Run static analysis"
+    cmds:
+      - go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+
+  vet:
+    desc: "Run go vet"
+    cmds:
+      - go vet ./...
+
+  test:unit:
+    desc: "Run unit tests"
+    cmds:
+      - go test ./...
+
+  build:
+    desc: "Compile the binary"
+    cmds:
+      - go build ./...
+
+  tidy:
+    desc: "Tidy Go modules"
+    cmds:
+      - go mod tidy
+
+  clean:
+    desc: "Remove build artifacts and test cache"
+    cmds:
+      - go clean -testcache
