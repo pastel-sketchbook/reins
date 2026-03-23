@@ -1,0 +1,52 @@
+version: "3"
+
+# ---------------------------------------------------------------------------
+# Zig project task automation — preconfigured by `reins init --lang zig`.
+#
+# The `check:all` task is mandatory. AGENTS.md rule V-01 requires the agent
+# to run it before every commit.
+# ---------------------------------------------------------------------------
+
+tasks:
+  check:all:
+    desc: "Run all quality gates"
+    deps: [format, build, test:unit]
+    cmds:
+      - echo "All checks passed!"
+
+  format:
+    desc: "Format Zig source files"
+    cmds:
+      - zig fmt src/
+
+  build:
+    desc: "Compile the project (debug)"
+    cmds:
+      - zig build
+
+  test:unit:
+    desc: "Run unit tests"
+    cmds:
+      - zig build test
+
+  build:release:
+    desc: "Compile the project (release-safe)"
+    cmds:
+      - zig build -Doptimize=ReleaseSafe
+
+  audit:
+    desc: "Check for known issues (manual review)"
+    cmds:
+      # Zig has no cargo-audit equivalent yet. This task runs the compiler
+      # in a mode that surfaces warnings and deprecated patterns.
+      - zig build -Doptimize=Debug 2>&1 | grep -i "deprecat\|warning" || echo "No warnings found."
+
+  clean:
+    desc: "Remove build artifacts"
+    cmds:
+      - rm -rf zig-out zig-cache .zig-cache
+
+  loc:
+    desc: "Count lines of code"
+    cmds:
+      - tokei

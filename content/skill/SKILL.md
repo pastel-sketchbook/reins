@@ -61,6 +61,7 @@ they do not generate application code.
 |--------|------|--------------------|
 | Go | `--lang go` | Taskfile with gofmt/vet/staticcheck/test, Go-specific AGENTS.md, `**/*.go` trigger, `rules/specifics/go.md`, `docs/rationale/` |
 | Rust | `--lang rust` | Taskfile with cargo fmt/clippy/test/build, Rust TUI AGENTS.md (ratatui + crossterm), `**/*.rs` trigger, `rules/specifics/rust.md`, `docs/rationale/` |
+| Zig | `--lang zig` | Taskfile with zig fmt/build/test, Zig AGENTS.md (allocators + std.log), `**/*.zig` trigger, `rules/specifics/zig.md`, `docs/rationale/` |
 
 Adding a new preset requires only a `content/presets/<lang>/` directory and
 an entry in the `presetRuleTemplates` map.

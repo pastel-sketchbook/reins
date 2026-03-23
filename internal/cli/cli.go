@@ -84,10 +84,12 @@ Commands:
 Language presets (--lang):
   go      Go project (gofmt, go vet, staticcheck, go test)
   rust    Rust project (cargo fmt, cargo clippy, cargo test)
+  zig     Zig project (zig fmt, zig build, zig build test)
 
 Run 'reins init' from your project root to get started.
 Run 'reins init --lang go' for a preconfigured Go project.
 Run 'reins init --lang rust' for a preconfigured Rust project.
+Run 'reins init --lang zig' for a preconfigured Zig project.
 `)
 }
 
@@ -461,6 +463,7 @@ func validatePreset(lang string) error {
 var presetRuleTemplates = map[string][]string{
 	"go":   {"go.md"},
 	"rust": {"rust.md"},
+	"zig":  {"zig.md"},
 }
 
 // applyPreset overwrites generic scaffold files with language-specific

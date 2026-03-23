@@ -934,3 +934,144 @@ func TestRunInit_LangViaRunDispatcher(t *testing.T) {
 		t.Error("Taskfile.yml should be the Go preset, not the generic skeleton")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Zig preset tests (--lang zig)
+// ---------------------------------------------------------------------------
+
+func TestRunInit_ZigPresetCreatesZigTaskfile(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "zig"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang zig) = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("Taskfile.yml")
+	if err != nil {
+		t.Fatalf("failed to read Taskfile.yml: %v", err)
+	}
+
+	content := string(data)
+
+	// Zig preset Taskfile must NOT contain placeholder exit-1 errors.
+	if strings.Contains(content, "exit 1") {
+		t.Error("Zig preset Taskfile.yml still contains placeholder 'exit 1'")
+	}
+
+	// Must contain real Zig commands.
+	for _, want := range []string{"zig fmt", "zig build", "zig build test"} {
+		if !strings.Contains(content, want) {
+			t.Errorf("Zig preset Taskfile.yml missing %q", want)
+		}
+	}
+}
+
+func TestRunInit_ZigPresetCreatesZigIndexYaml(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "zig"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang zig) = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("rules/INDEX.yaml")
+	if err != nil {
+		t.Fatalf("failed to read INDEX.yaml: %v", err)
+	}
+
+	content := string(data)
+
+	// Zig preset INDEX.yaml must have an uncommented Zig trigger.
+	if !strings.Contains(content, "trigger: \"**/*.zig\"") {
+		t.Error("Zig preset INDEX.yaml missing uncommented Zig trigger")
+	}
+	if !strings.Contains(content, "rules/specifics/zig.md") {
+		t.Error("Zig preset INDEX.yaml missing zig.md rule reference")
+	}
+}
+
+func TestRunInit_ZigPresetCopiesZigRules(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "zig"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang zig) = %d, want 0", code)
+	}
+
+	// Zig rules should be auto-copied from templates.
+	data, err := os.ReadFile("rules/specifics/zig.md")
+	if err != nil {
+		t.Fatalf("expected rules/specifics/zig.md to exist: %v", err)
+	}
+
+	if !strings.Contains(string(data), "S-ZIG-01") {
+		t.Error("rules/specifics/zig.md missing expected Zig rule content")
+	}
+}
+
+func TestRunInit_ZigPresetCreatesADRDirectory(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "zig"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang zig) = %d, want 0", code)
+	}
+
+	info, err := os.Stat("docs/rationale")
+	if err != nil {
+		t.Fatalf("expected docs/rationale/ to exist: %v", err)
+	}
+	if !info.IsDir() {
+		t.Error("docs/rationale should be a directory")
+	}
+}
+
+func TestRunInit_ZigPresetAgentsMdHasTechStack(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "zig"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang zig) = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("AGENTS.md")
+	if err != nil {
+		t.Fatalf("failed to read AGENTS.md: %v", err)
+	}
+
+	content := string(data)
+
+	if !strings.Contains(content, "Tech Stack") {
+		t.Error("Zig preset AGENTS.md missing 'Tech Stack' section")
+	}
+	if !strings.Contains(content, "build.zig") {
+		t.Error("Zig preset AGENTS.md missing 'build.zig' in tech stack")
+	}
+	if !strings.Contains(content, "Architecture Decision Records") {
+		t.Error("Zig preset AGENTS.md missing 'Architecture Decision Records' section")
+	}
+}
+
+func TestRunInit_ZigPresetViaRunDispatcher(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := Run(ctx, []string{"reins", "init", "--lang", "zig"})
+	if code != 0 {
+		t.Errorf("Run init --lang zig = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("Taskfile.yml")
+	if err != nil {
+		t.Fatalf("failed to read Taskfile.yml: %v", err)
+	}
+	if strings.Contains(string(data), "exit 1") {
+		t.Error("Taskfile.yml should be the Zig preset, not the generic skeleton")
+	}
+}
