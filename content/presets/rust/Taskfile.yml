@@ -29,6 +29,11 @@ tasks:
     cmds:
       - cargo test --all-features
 
+  fmt:check:
+    desc: "Check formatting without modifying files (CI)"
+    cmds:
+      - cargo fmt --all -- --check
+
   build:
     desc: "Compile the project (debug)"
     cmds:
@@ -38,6 +43,13 @@ tasks:
     desc: "Compile the project (release)"
     cmds:
       - cargo build --release --all-features
+
+  audit:
+    desc: "Check dependencies for known vulnerabilities"
+    cmds:
+      - cargo audit
+      # Uncomment for license and duplicate-dep checks:
+      # - cargo deny check
 
   clean:
     desc: "Remove build artifacts"

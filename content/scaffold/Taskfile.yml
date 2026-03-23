@@ -42,3 +42,8 @@ tasks:
     desc: "Compile/build the project"
     cmds:
       - echo "ERROR: configure the 'build' task" && exit 1
+
+  audit:
+    desc: "Check dependencies for known vulnerabilities"
+    cmds:
+      - echo "ERROR: configure the 'audit' task (e.g., govulncheck ./..., cargo audit, npm audit)" && exit 1

@@ -19,3 +19,9 @@ Consult `rules/INDEX.yaml` at the start of every task (see METHODOLOGY.md L-01).
 - Run `task check:all` before every commit.
 - The rule-guard agent is defined in `.reins/agents/rule-guard.md`.
   Invoke it for independent verification — do not self-review.
+
+## Audit
+
+Run `task audit` periodically to check for vulnerable dependencies.
+Configure the audit task in `Taskfile.yml` with your language's tool
+(e.g., `govulncheck`, `cargo audit`, `npm audit`).

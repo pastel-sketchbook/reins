@@ -27,6 +27,8 @@ tasks:
   lint:
     desc: "Run static analysis"
     cmds:
+      # Prefer golangci-lint if installed:
+      # - golangci-lint run ./...
       - go run honnef.co/go/tools/cmd/staticcheck@latest ./...
 
   vet:
@@ -39,6 +41,11 @@ tasks:
     cmds:
       - go test ./...
 
+  test:race:
+    desc: "Run unit tests with race detector"
+    cmds:
+      - go test -race ./...
+
   build:
     desc: "Compile the binary"
     cmds:
@@ -48,6 +55,11 @@ tasks:
     desc: "Tidy Go modules"
     cmds:
       - go mod tidy
+
+  audit:
+    desc: "Check dependencies for known vulnerabilities"
+    cmds:
+      - go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   clean:
     desc: "Remove build artifacts and test cache"
