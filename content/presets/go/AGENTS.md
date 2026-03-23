@@ -10,6 +10,7 @@ your core methodology — TDD, Tidy First, commit rules, and quality standards.
 - Structured logging: `log/slog` (stdlib only)
 - Context: `context.Context` threaded explicitly through all functions
 - Build system: [Task](https://taskfile.dev) (see `Taskfile.yml`)
+- Lines of code: [tokei](https://github.com/XAMPPRocky/tokei) (`task loc`)
 
 ## Rule System
 

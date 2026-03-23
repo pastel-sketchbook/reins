@@ -65,3 +65,8 @@ tasks:
     desc: "Remove build artifacts and test cache"
     cmds:
       - go clean -testcache
+
+  loc:
+    desc: "Count lines of code"
+    cmds:
+      - tokei

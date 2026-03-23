@@ -55,3 +55,8 @@ tasks:
     desc: "Remove build artifacts"
     cmds:
       - cargo clean
+
+  loc:
+    desc: "Count lines of code"
+    cmds:
+      - tokei

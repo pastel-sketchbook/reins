@@ -47,3 +47,8 @@ tasks:
     desc: "Check dependencies for known vulnerabilities"
     cmds:
       - echo "ERROR: configure the 'audit' task (e.g., govulncheck ./..., cargo audit, npm audit)" && exit 1
+
+  loc:
+    desc: "Count lines of code"
+    cmds:
+      - tokei

@@ -12,6 +12,7 @@ your core methodology — TDD, Tidy First, commit rules, and quality standards.
 - Error handling: `anyhow` for application, `thiserror` for library crates
 - Observability: `tracing` + `tracing-subscriber` (with `EnvFilter`)
 - Build system: [Task](https://taskfile.dev) (see `Taskfile.yml`)
+- Lines of code: [tokei](https://github.com/XAMPPRocky/tokei) (`task loc`)
 
 ## Rule System
 
