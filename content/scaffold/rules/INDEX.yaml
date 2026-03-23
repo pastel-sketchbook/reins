@@ -23,6 +23,13 @@ principles:
 #          content pattern. Add your project's concerns here.
 # ---------------------------------------------------------------------------
 concerns:
+  # Log-trace correlation: activated when a Go file imports log/slog.
+  # Ensures structured logs carry trace_id/span_id for distributed tracing.
+  # - trigger: "**/*.go"
+  #   content_pattern: "log/slog"
+  #   rules:
+  #     - rules/concerns/log-trace-correlation.md
+
   # Example: prohibit singletons in any source file that uses the pattern
   # - trigger: "**/*.{go,ts,js,py}"
   #   content_pattern: "[Ss]ingleton|getInstance"
@@ -43,6 +50,18 @@ specifics:
   # - trigger: "**/*.go"
   #   rules:
   #     - rules/specifics/go.md
+
+  # Example: Go + OpenTelemetry (activated when file imports go.opentelemetry.io)
+  # - trigger: "**/*.go"
+  #   content_pattern: "go.opentelemetry.io"
+  #   rules:
+  #     - rules/specifics/otel.md
+
+  # Example: Go + Echo framework
+  # - trigger: "**/*.go"
+  #   content_pattern: "labstack/echo"
+  #   rules:
+  #     - rules/specifics/echo.md
 
   # Example: TypeScript project
   # - trigger: "**/*.{ts,tsx}"

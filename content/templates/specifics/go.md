@@ -17,6 +17,20 @@ Loaded via `rules/INDEX.yaml` trigger: `**/*.go`.
 - **S-GO-08** — MUST format all code with `gofmt` and organize imports with `goimports`.
 - **S-GO-09** — MUST pass `golangci-lint` with zero warnings before committing.
 
+## Logging
+
+- **S-GO-12** — MUST use `log/slog` for all application logging. No
+  `fmt.Println`, `fmt.Printf`, `log.Print*`, or third-party loggers (`logrus`,
+  `zap`, `zerolog`) for application-level output. The only exception is
+  `log.Fatal` in `main()` for startup failures before `slog` is initialized.
+
+- **S-GO-13** — MUST use context-aware slog variants (`slog.InfoContext`,
+  `slog.WarnContext`, `slog.ErrorContext`, `slog.DebugContext`) whenever a
+  `context.Context` is in scope. Never use the context-free variants
+  (`slog.Info`, `slog.Warn`, `slog.Error`, `slog.Debug`) outside of `main()`
+  or top-level initialization where no context exists. This ensures trace IDs
+  and other context-carried metadata flow into every log record.
+
 ## Verification
 
 - **S-GO-10** — MUST run `task check:all` (format, lint, unit tests) before every commit.
