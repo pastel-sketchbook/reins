@@ -60,6 +60,7 @@ they do not generate application code.
 | Preset | Flag | What it configures |
 |--------|------|--------------------|
 | Go | `--lang go` | Taskfile with gofmt/vet/staticcheck/test, Go-specific AGENTS.md, `**/*.go` trigger, `rules/specifics/go.md`, `docs/rationale/` |
+| Rust | `--lang rust` | Taskfile with cargo fmt/clippy/test/build, Rust TUI AGENTS.md (ratatui + crossterm), `**/*.rs` trigger, `rules/specifics/rust.md`, `docs/rationale/` |
 
 Adding a new preset requires only a `content/presets/<lang>/` directory and
 an entry in the `presetRuleTemplates` map.
@@ -184,7 +185,7 @@ is a persistent backlog that survives across sessions.
 
 ## Setup Checklist (after `reins init`)
 
-> **Tip:** If you used `reins init --lang go`, steps 1-3 are already done.
+> **Tip:** If you used `reins init --lang <name>`, steps 1-3 are already done.
 > Skip to step 4.
 
 1. Edit `Taskfile.yml` -- replace placeholder commands with your toolchain

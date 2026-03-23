@@ -732,6 +732,147 @@ func TestRunInit_GoPresetAgentsMdHasTechStack(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Rust preset tests (--lang rust)
+// ---------------------------------------------------------------------------
+
+func TestRunInit_RustPresetCreatesRustTaskfile(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "rust"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang rust) = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("Taskfile.yml")
+	if err != nil {
+		t.Fatalf("failed to read Taskfile.yml: %v", err)
+	}
+
+	content := string(data)
+
+	// Rust preset Taskfile must NOT contain placeholder exit-1 errors.
+	if strings.Contains(content, "exit 1") {
+		t.Error("Rust preset Taskfile.yml still contains placeholder 'exit 1'")
+	}
+
+	// Must contain real Rust/cargo commands.
+	for _, want := range []string{"cargo fmt", "cargo clippy", "cargo test", "cargo build"} {
+		if !strings.Contains(content, want) {
+			t.Errorf("Rust preset Taskfile.yml missing %q", want)
+		}
+	}
+}
+
+func TestRunInit_RustPresetCreatesRustIndexYaml(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "rust"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang rust) = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("rules/INDEX.yaml")
+	if err != nil {
+		t.Fatalf("failed to read INDEX.yaml: %v", err)
+	}
+
+	content := string(data)
+
+	// Rust preset INDEX.yaml must have an uncommented Rust trigger.
+	if !strings.Contains(content, "trigger: \"**/*.rs\"") {
+		t.Error("Rust preset INDEX.yaml missing uncommented Rust trigger")
+	}
+	if !strings.Contains(content, "rules/specifics/rust.md") {
+		t.Error("Rust preset INDEX.yaml missing rust.md rule reference")
+	}
+}
+
+func TestRunInit_RustPresetCopiesRustRules(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "rust"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang rust) = %d, want 0", code)
+	}
+
+	// Rust rules should be auto-copied from templates.
+	data, err := os.ReadFile("rules/specifics/rust.md")
+	if err != nil {
+		t.Fatalf("expected rules/specifics/rust.md to exist: %v", err)
+	}
+
+	if !strings.Contains(string(data), "S-RS-01") {
+		t.Error("rules/specifics/rust.md missing expected Rust rule content")
+	}
+}
+
+func TestRunInit_RustPresetCreatesADRDirectory(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "rust"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang rust) = %d, want 0", code)
+	}
+
+	info, err := os.Stat("docs/rationale")
+	if err != nil {
+		t.Fatalf("expected docs/rationale/ to exist: %v", err)
+	}
+	if !info.IsDir() {
+		t.Error("docs/rationale should be a directory")
+	}
+}
+
+func TestRunInit_RustPresetAgentsMdHasTechStack(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := runInit(ctx, []string{"--lang", "rust"})
+	if code != 0 {
+		t.Fatalf("runInit(--lang rust) = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("AGENTS.md")
+	if err != nil {
+		t.Fatalf("failed to read AGENTS.md: %v", err)
+	}
+
+	content := string(data)
+
+	if !strings.Contains(content, "Tech Stack") {
+		t.Error("Rust preset AGENTS.md missing 'Tech Stack' section")
+	}
+	if !strings.Contains(content, "ratatui") {
+		t.Error("Rust preset AGENTS.md missing 'ratatui' in tech stack")
+	}
+	if !strings.Contains(content, "Architecture Decision Records") {
+		t.Error("Rust preset AGENTS.md missing 'Architecture Decision Records' section")
+	}
+}
+
+func TestRunInit_RustPresetViaRunDispatcher(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	code := Run(ctx, []string{"reins", "init", "--lang", "rust"})
+	if code != 0 {
+		t.Errorf("Run init --lang rust = %d, want 0", code)
+	}
+
+	data, err := os.ReadFile("Taskfile.yml")
+	if err != nil {
+		t.Fatalf("failed to read Taskfile.yml: %v", err)
+	}
+	if strings.Contains(string(data), "exit 1") {
+		t.Error("Taskfile.yml should be the Rust preset, not the generic skeleton")
+	}
+}
+
 func TestRunInit_InvalidLangFails(t *testing.T) {
 	t.Chdir(t.TempDir())
 	ctx := context.Background()

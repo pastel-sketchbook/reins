@@ -1,0 +1,45 @@
+version: "3"
+
+# ---------------------------------------------------------------------------
+# Rust project task automation — preconfigured by `reins init --lang rust`.
+#
+# The `check:all` task is mandatory. AGENTS.md rule V-01 requires the agent
+# to run it before every commit.
+# ---------------------------------------------------------------------------
+
+tasks:
+  check:all:
+    desc: "Run all quality gates"
+    deps: [format, lint, test:unit]
+    cmds:
+      - echo "All checks passed!"
+
+  format:
+    desc: "Format Rust source files"
+    cmds:
+      - cargo fmt --all
+
+  lint:
+    desc: "Run clippy at pedantic level"
+    cmds:
+      - cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic
+
+  test:unit:
+    desc: "Run unit tests"
+    cmds:
+      - cargo test --all-features
+
+  build:
+    desc: "Compile the project (debug)"
+    cmds:
+      - cargo build --all-features
+
+  build:release:
+    desc: "Compile the project (release)"
+    cmds:
+      - cargo build --release --all-features
+
+  clean:
+    desc: "Remove build artifacts"
+    cmds:
+      - cargo clean

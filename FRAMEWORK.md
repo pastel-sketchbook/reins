@@ -611,7 +611,7 @@ diff AUTOPILOT.md .reins/scaffold/AUTOPILOT.md
 
 | Command | Description |
 |---------|-------------|
-| `reins init [--lang <name>]` | Bootstrap reins in the current project. With `--lang`, apply a language preset (available: `go`) |
+| `reins init [--lang <name>]` | Bootstrap reins in the current project. With `--lang`, apply a language preset (available: `go`, `rust`) |
 | `reins update` | Refresh managed files to latest version |
 | `reins skill` | Install the reins AI tool skill (global or local) |
 | `reins list` | List available language/framework templates |

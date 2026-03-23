@@ -77,10 +77,11 @@ code.
 | Preset | Flag | What it configures |
 |--------|------|--------------------|
 | Go | `--lang go` | Taskfile with gofmt/vet/staticcheck/test, Go-specific AGENTS.md, `**/*.go` trigger, `rules/specifics/go.md`, `docs/rationale/` |
+| Rust | `--lang rust` | Taskfile with cargo fmt/clippy/test/build, Rust TUI AGENTS.md (ratatui + crossterm), `**/*.rs` trigger, `rules/specifics/rust.md`, `docs/rationale/` |
 
 Adding a new preset requires only a `content/presets/<lang>/` directory and
-an entry in the `presetRuleTemplates` map. Presets for TypeScript, Rust,
-and Python are planned.
+an entry in the `presetRuleTemplates` map. Presets for TypeScript and
+Python are planned.
 
 ## What You Get
 
@@ -280,7 +281,7 @@ diff rules/INDEX.yaml .reins/scaffold/rules/INDEX.yaml
 
 | Command | Description |
 |---------|-------------|
-| `reins init [--lang <name>]` | Bootstrap reins in the current project. With `--lang`, apply a language preset (available: `go`) |
+| `reins init [--lang <name>]` | Bootstrap reins in the current project. With `--lang`, apply a language preset (available: `go`, `rust`) |
 | `reins update` | Refresh managed files to the latest version |
 | `reins list` | List available language/framework templates |
 | `reins version` | Print installed reins version |
