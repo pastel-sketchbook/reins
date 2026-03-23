@@ -34,10 +34,11 @@ go install github.com/pastel-sketchbook/reins/cmd/reins@latest
 ```bash
 cd your-project
 
-# Bootstrap reins
+# Bootstrap reins (generic -- language-agnostic TODO placeholders)
 reins init
 
-# Customize the generated files (see below)
+# -- or -- Bootstrap with a language preset (pre-configured for Go)
+reins init --lang go
 
 # Commit
 git add .reins AGENTS.md rules/ Taskfile.yml
@@ -57,6 +58,29 @@ git commit -m "chore: init reins framework"
 
 It also creates empty `rules/specifics/`, `rules/concerns/`, and
 `rules/principles/` directories for your project-specific rules.
+
+With `--lang go`, the preset additionally:
+
+- Replaces `Taskfile.yml` with a fully configured Go toolchain (gofmt, go vet, staticcheck, go test, go build)
+- Replaces `AGENTS.md` with a Go-specific bridge file including Tech Stack and ADR conventions
+- Activates `**/*.go` trigger in `rules/INDEX.yaml`
+- Copies `go.md` language rules into `rules/specifics/`
+- Creates `docs/rationale/` for Architecture Decision Records
+
+## Language Presets
+
+The `--lang` flag replaces generic TODO placeholders with a fully configured
+scaffold for a specific language. Presets only configure reins artifacts
+(Taskfile, AGENTS.md, INDEX.yaml, rules) -- they do not generate application
+code.
+
+| Preset | Flag | What it configures |
+|--------|------|--------------------|
+| Go | `--lang go` | Taskfile with gofmt/vet/staticcheck/test, Go-specific AGENTS.md, `**/*.go` trigger, `rules/specifics/go.md`, `docs/rationale/` |
+
+Adding a new preset requires only a `content/presets/<lang>/` directory and
+an entry in the `presetRuleTemplates` map. Presets for TypeScript, Rust,
+and Python are planned.
 
 ## What You Get
 
@@ -122,6 +146,8 @@ your-project/
 ├── Taskfile.yml                     # your project's task automation
 ├── AUTOPILOT.md                     # autopilot goal/constraints (optional)
 │
+├── docs/rationale/                  # ADRs (created by --lang presets)
+│
 └── rules/                           # your project-specific rules
     ├── INDEX.yaml                   # trigger mapping
     ├── principles/                  # (optional) additional principles
@@ -129,7 +155,15 @@ your-project/
     └── specifics/                   # language/framework rules
 ```
 
+The `docs/rationale/` directory is only created when using a language
+preset (`--lang`). It follows the `000n_<slug>.md` naming convention
+for Architecture Decision Records.
+
 ## Customization
+
+> **Tip:** If you used `reins init --lang go`, steps 1 and 2 below are
+> already done -- the Taskfile is pre-configured and language rules are
+> copied into `rules/specifics/`. Skip to step 3.
 
 ### 1. Taskfile.yml
 
@@ -246,7 +280,7 @@ diff rules/INDEX.yaml .reins/scaffold/rules/INDEX.yaml
 
 | Command | Description |
 |---------|-------------|
-| `reins init` | Bootstrap reins in the current project |
+| `reins init [--lang <name>]` | Bootstrap reins in the current project. With `--lang`, apply a language preset (available: `go`) |
 | `reins update` | Refresh managed files to the latest version |
 | `reins list` | List available language/framework templates |
 | `reins version` | Print installed reins version |

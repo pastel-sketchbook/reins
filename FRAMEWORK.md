@@ -446,7 +446,13 @@ go install github.com/pastel-sketchbook/reins/cmd/reins@latest
 
 ```bash
 cd your-project
+
+# Generic (language-agnostic TODO placeholders)
 reins init
+
+# -- or -- With a language preset (pre-configured for Go)
+reins init --lang go
+
 # Customize Taskfile.yml, rules/INDEX.yaml, AGENTS.md
 git add .reins AGENTS.md rules/ Taskfile.yml
 git commit -m "chore: init reins framework"
@@ -460,6 +466,7 @@ The binary embeds three categories of content via `go:embed`:
 |----------|--------------|-------------|-------------------|
 | **Managed** | `content/managed/` | `.reins/` | Overwritten on `reins update` |
 | **Scaffold** | `content/scaffold/` | Project root | Created once, never overwritten |
+| **Presets** | `content/presets/<lang>/` | Project root (overrides scaffold) | Applied once during `reins init --lang` |
 | **Templates** | `content/templates/` | `.reins/templates/` | Refreshed on `reins update` |
 
 **Managed files** are owned by reins: `METHODOLOGY.md`, `agents/rule-guard.md`,
@@ -472,6 +479,81 @@ when the user runs `reins update`.
 
 **Template files** are language/framework rule templates (e.g.,
 `specifics/go.md`) that the user manually copies into `rules/specifics/`.
+
+**Preset files** are language-specific overrides that replace scaffold
+placeholders. Applied once during `reins init --lang <name>`. The Go preset
+serves as the reference implementation.
+
+### Adding a language preset
+
+To add a new language preset (e.g., `ts`, `rust`, `python`), complete
+every step below. Use the Go preset (`content/presets/go/`) as a reference.
+
+#### 1. Create preset content files
+
+Create `content/presets/<lang>/` with up to three files:
+
+| File | Required | Purpose |
+|------|----------|---------|
+| `Taskfile.yml` | Yes | Fully configured tasks for the language's toolchain. Must define `check:all`, `format`, `lint`, `test:unit`, and `build`. No TODO placeholders or `exit 1` stubs. |
+| `AGENTS.md` | Yes | Bridge file with Tech Stack section, Rule System section, ADR convention, Verification section. Must include `include: .reins/AGENTS.md` on line 1. |
+| `rules/INDEX.yaml` | Yes | Uncomment the language's `specifics:` trigger. Keep other triggers commented as opt-in. Must preserve the same structure as `content/scaffold/rules/INDEX.yaml`. |
+
+Each file overwrites the generic scaffold equivalent during init.
+
+#### 2. Create or verify the rule template
+
+Ensure `content/templates/specifics/<lang>.md` exists. This is the
+language rule file that gets copied into `rules/specifics/`. If one
+already exists, no action needed. If not, create it following the
+MUST/MUST NOT format with unique IDs (e.g., `S-RS-01` for Rust).
+
+#### 3. Register in `presetRuleTemplates`
+
+In `internal/cli/cli.go`, add an entry to the `presetRuleTemplates` map:
+
+```go
+var presetRuleTemplates = map[string][]string{
+    "go": {"go.md"},
+    "ts": {"ts.md"},  // <-- new entry
+}
+```
+
+Each value is a list of filenames relative to `templates/specifics/` that
+get auto-copied to `rules/specifics/` during preset init. Multiple files
+are supported (e.g., a framework preset might copy both `ts.md` and
+`react.md`).
+
+#### 4. Add tests
+
+Add at minimum these test cases in `internal/cli/cli_test.go` (mirror the
+Go preset tests):
+
+| Test | Asserts |
+|------|---------|
+| `TestRunInit_<Lang>PresetCreatesTaskfile` | Taskfile.yml has language-specific commands, no `exit 1` placeholders |
+| `TestRunInit_<Lang>PresetCreatesIndexYaml` | INDEX.yaml has uncommented trigger for the language's file extension |
+| `TestRunInit_<Lang>PresetCopiesRules` | `rules/specifics/<lang>.md` exists and is non-empty |
+| `TestRunInit_<Lang>PresetCreatesADRDirectory` | `docs/rationale/` directory exists |
+| `TestRunInit_<Lang>PresetAgentsMd` | AGENTS.md contains "Tech Stack" section |
+| `TestRunInit_<Lang>ViaRunDispatcher` | `Run(ctx, []string{"reins", "init", "--lang", "<lang>"})` returns 0 |
+
+#### 5. Update documentation
+
+Update these files to list the new preset:
+
+| File | Section to update |
+|------|-------------------|
+| `README.md` | "Language Presets" table, `--lang go` bullet list in Quick Start |
+| `FRAMEWORK.md` | This section's reference to available presets, CLI reference table |
+| `content/skill/SKILL.md` | CLI table, `--lang` subsection preset table, setup checklist |
+| `internal/cli/cli.go` | `printUsage()` help text listing available presets |
+
+#### 6. Verify
+
+Run `task check:all`. All existing tests plus new preset tests must pass.
+The `TestRunInit_NoLangStillWorks` test must continue to pass (backward
+compatibility).
 
 ### What lives where (downstream project)
 
@@ -529,7 +611,7 @@ diff AUTOPILOT.md .reins/scaffold/AUTOPILOT.md
 
 | Command | Description |
 |---------|-------------|
-| `reins init` | Bootstrap reins in the current project |
+| `reins init [--lang <name>]` | Bootstrap reins in the current project. With `--lang`, apply a language preset (available: `go`) |
 | `reins update` | Refresh managed files to latest version |
 | `reins skill` | Install the reins AI tool skill (global or local) |
 | `reins list` | List available language/framework templates |

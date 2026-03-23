@@ -30,7 +30,7 @@ TDD methodology, layered code rules, and independent verification.
 
 | Command | Description |
 |---------|-------------|
-| `reins init` | Bootstrap reins in the current project |
+| `reins init [--lang <name>]` | Bootstrap reins in the current project. With `--lang`, apply a language preset |
 | `reins update` | Refresh managed files in `.reins/` to the latest version |
 | `reins list` | List available language/framework rule templates |
 | `reins skill` | Install the reins skill for AI tool discovery |
@@ -50,6 +50,19 @@ Run from the project root. Creates:
 Scaffold files (AGENTS.md, Taskfile.yml, etc.) are created once and never
 overwritten. They are project-owned. Managed files in `.reins/` are owned
 by reins and refreshed on `reins update`.
+
+#### Language presets (`--lang`)
+
+The `--lang` flag replaces generic placeholders with a fully configured
+scaffold for a specific language. Presets only configure reins artifacts --
+they do not generate application code.
+
+| Preset | Flag | What it configures |
+|--------|------|--------------------|
+| Go | `--lang go` | Taskfile with gofmt/vet/staticcheck/test, Go-specific AGENTS.md, `**/*.go` trigger, `rules/specifics/go.md`, `docs/rationale/` |
+
+Adding a new preset requires only a `content/presets/<lang>/` directory and
+an entry in the `presetRuleTemplates` map.
 
 ### `reins update`
 
@@ -170,6 +183,9 @@ is a persistent backlog that survives across sessions.
 ---
 
 ## Setup Checklist (after `reins init`)
+
+> **Tip:** If you used `reins init --lang go`, steps 1-3 are already done.
+> Skip to step 4.
 
 1. Edit `Taskfile.yml` -- replace placeholder commands with your toolchain
 2. Edit `rules/INDEX.yaml` -- add triggers for your language/framework
