@@ -14,7 +14,7 @@ version: "3"
 tasks:
   check:all:
     desc: "Run all quality gates"
-    deps: [format, lint, test:unit]
+    deps: [format, fix, lint, test:unit]
     cmds:
       - echo "All checks passed!"
 
@@ -22,6 +22,11 @@ tasks:
     desc: "Auto-format source files"
     cmds:
       - echo "ERROR: configure the 'format' task (e.g., gofmt, prettier, rustfmt, black)" && exit 1
+
+  fix:
+    desc: "Run language modernizer (e.g., go fix ./...)"
+    cmds:
+      - echo "ERROR: configure the 'fix' task (e.g., go fix ./...) or remove from check:all deps" && exit 1
 
   lint:
     desc: "Run static analysis"

@@ -19,7 +19,7 @@ tasks:
 
   check:all:
     desc: "Run all quality gates"
-    deps: [format, lint, vet, test:unit]
+    deps: [format, fix, lint, vet, test:unit]
     cmds:
       - echo "All checks passed!"
 
@@ -27,6 +27,11 @@ tasks:
     desc: "Format Go source files"
     cmds:
       - gofmt -w .
+
+  fix:
+    desc: "Run Go 1.26 modernizer (go fix)"
+    cmds:
+      - go fix ./...
 
   lint:
     desc: "Run staticcheck ({{.STATICCHECK_VERSION}})"
