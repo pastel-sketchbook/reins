@@ -1346,6 +1346,194 @@ func TestRunLens_CustomOutput_RegistersCustomPath(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Free command tests (reins free)
+// ---------------------------------------------------------------------------
+
+func TestRunFree_RemovesManagedDir(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	code := runFree(ctx)
+	if code != 0 {
+		t.Fatalf("runFree() = %d, want 0", code)
+	}
+
+	if _, err := os.Stat(managedDir); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf(".reins/ should be removed, but still exists")
+	}
+}
+
+func TestRunFree_KeepsProjectFiles(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	code := runFree(ctx)
+	if code != 0 {
+		t.Fatalf("runFree() = %d, want 0", code)
+	}
+
+	keepFiles := []string{
+		"AGENTS.md",
+		"Taskfile.yml",
+		".editorconfig",
+		"AUTOPILOT.md",
+		"rules/INDEX.yaml",
+	}
+	for _, f := range keepFiles {
+		if _, err := os.Stat(f); err != nil {
+			t.Errorf("expected %s to be preserved: %v", f, err)
+		}
+	}
+
+	keepDirs := []string{
+		"rules/principles",
+		"rules/concerns",
+		"rules/specifics",
+	}
+	for _, d := range keepDirs {
+		info, err := os.Stat(d)
+		if err != nil {
+			t.Errorf("expected directory %s to be preserved: %v", d, err)
+			continue
+		}
+		if !info.IsDir() {
+			t.Errorf("expected %s to be a directory", d)
+		}
+	}
+}
+
+func TestRunFree_RemovesLocalSkill(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	setStdin(t, "l\n")
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	// Verify skill exists before free.
+	localSkill := filepath.Join(".agents", "skills", "reins", "SKILL.md")
+	if _, err := os.Stat(localSkill); err != nil {
+		t.Fatalf("expected local skill to exist before free: %v", err)
+	}
+
+	code := runFree(ctx)
+	if code != 0 {
+		t.Fatalf("runFree() = %d, want 0", code)
+	}
+
+	if _, err := os.Stat(localSkill); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("local skill should be removed after free")
+	}
+}
+
+func TestRunFree_RemovesGlobalSkill(t *testing.T) {
+	t.Chdir(t.TempDir())
+	fakeHome := t.TempDir()
+	t.Setenv("HOME", fakeHome)
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	// Manually place a global skill.
+	globalSkill := filepath.Join(fakeHome, ".agents", "skills", "reins", "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(globalSkill), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(globalSkill, []byte("skill content"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	code := runFree(ctx)
+	if code != 0 {
+		t.Fatalf("runFree() = %d, want 0", code)
+	}
+
+	if _, err := os.Stat(globalSkill); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("global skill should be removed after free")
+	}
+}
+
+func TestRunFree_FailsWithoutInit(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	logBuf := newTestLogger(t)
+	code := runFree(ctx)
+	if code != 1 {
+		t.Errorf("runFree() without init = %d, want 1", code)
+	}
+	if !strings.Contains(logBuf.String(), "not initialized") {
+		t.Errorf("expected 'not initialized' in log, got:\n%s", logBuf.String())
+	}
+}
+
+func TestRunFree_ViaRunDispatcher(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, nil); code != 0 {
+			t.Fatalf("runInit() = %d, want 0", code)
+		}
+	})
+
+	code := Run(ctx, []string{"reins", "free"})
+	if code != 0 {
+		t.Errorf("Run free = %d, want 0", code)
+	}
+
+	if _, err := os.Stat(managedDir); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf(".reins/ should be removed via Run dispatcher")
+	}
+}
+
+func TestRunFree_PreservesPresetFiles(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+
+	suppressOutput(t, func() {
+		if code := runInit(ctx, []string{"--lang", "go"}); code != 0 {
+			t.Fatalf("runInit(--lang go) = %d, want 0", code)
+		}
+	})
+
+	code := runFree(ctx)
+	if code != 0 {
+		t.Fatalf("runFree() = %d, want 0", code)
+	}
+
+	// Preset-created files should be preserved.
+	presetFiles := []string{
+		"rules/specifics/go.md",
+		"docs/rationale",
+	}
+	for _, f := range presetFiles {
+		if _, err := os.Stat(f); err != nil {
+			t.Errorf("expected %s to be preserved after free: %v", f, err)
+		}
+	}
+}
+
 func TestRunLens_InvalidLens(t *testing.T) {
 	t.Chdir(t.TempDir())
 	ctx := context.Background()

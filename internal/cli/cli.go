@@ -60,6 +60,8 @@ func Run(ctx context.Context, args []string) int {
 		return runLens(ctx, args[2:])
 	case "skill":
 		return runSkill(ctx)
+	case "free":
+		return runFree(ctx)
 	case "version":
 		fmt.Println(version)
 		return 0
@@ -82,6 +84,7 @@ Commands:
   list                  List available language/framework templates
   lens                  Generate analysis-lens concern templates
   skill                 Install the reins skill for AI tool discovery
+  free                  Remove reins auxiliary files, keep project code
   version               Print reins version
 
 Language presets (--lang):
@@ -546,6 +549,59 @@ func printPresetNextSteps(lang string) {
 	fmt.Println("       git add .reins .editorconfig AGENTS.md rules/ Taskfile.yml AUTOPILOT.md docs/")
 	fmt.Println("       git commit -m 'chore: init reins framework (" + lang + " preset)'")
 	fmt.Println()
+}
+
+// ---------------------------------------------------------------------------
+// Free subcommand
+// ---------------------------------------------------------------------------
+
+// runFree removes all reins-managed auxiliary files while preserving
+// project-owned code files (AGENTS.md, Taskfile.yml, rules/, etc.).
+func runFree(ctx context.Context) int {
+	if _, err := os.Stat(managedDir); errors.Is(err, fs.ErrNotExist) {
+		slog.ErrorContext(ctx, "not initialized, nothing to remove")
+		return 1
+	}
+
+	// 1. Remove the .reins/ managed directory.
+	if err := os.RemoveAll(managedDir); err != nil {
+		slog.ErrorContext(ctx, "failed to remove managed directory", "path", managedDir, "err", err)
+		return 1
+	}
+	slog.InfoContext(ctx, "removed", "path", managedDir+"/")
+
+	// 2. Remove local skill if present.
+	removeSkillDir(ctx, filepath.Dir(localSkillPath()))
+
+	// 3. Remove global skill if present.
+	removeSkillDir(ctx, filepath.Dir(globalSkillPath()))
+
+	fmt.Println()
+	fmt.Println("Removed reins auxiliary files.")
+	fmt.Println()
+	fmt.Println("Preserved project-owned files:")
+	fmt.Println("  AGENTS.md, Taskfile.yml, .editorconfig, AUTOPILOT.md")
+	fmt.Println("  rules/  (INDEX.yaml, principles/, concerns/, specifics/)")
+	fmt.Println()
+	fmt.Println("To fully remove reins from this project, delete those files manually.")
+	fmt.Println("To re-initialize: reins init")
+	fmt.Println()
+
+	return 0
+}
+
+// removeSkillDir removes the .agents/skills/reins/ directory if it exists.
+// Parent directories (.agents/skills/) are left in place since they may
+// contain other skills.
+func removeSkillDir(ctx context.Context, dir string) {
+	if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
+		return
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		slog.WarnContext(ctx, "failed to remove skill directory", "path", dir, "err", err)
+		return
+	}
+	slog.InfoContext(ctx, "removed", "path", dir+"/")
 }
 
 // ---------------------------------------------------------------------------
